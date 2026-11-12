@@ -1,0 +1,11 @@
+Options -Indexes -ExecCGI
+
+# Public school photos may be served, but executable or server-side source files are denied.
+<FilesMatch "(?i)\.(php[0-9]?|phtml|phar|pl|cgi|asp|aspx|jsp|sh|exe)$">
+    Require all denied
+</FilesMatch>
+
+# Never serve hidden configuration, environment, or version-control files.
+<FilesMatch "^\.">
+    Require all denied
+</FilesMatch>

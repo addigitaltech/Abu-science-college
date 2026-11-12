@@ -20,8 +20,8 @@ class ExampleTest extends TestCase
     {
         $this->get('/')
             ->assertOk()
-            ->assertSee('Emmaculate Academy')
-            ->assertSee('Determined to make a difference')
-            ->assertSee('Raising Future Leaders with Integrity, Knowledge &amp; Purpose', false);
+            ->assertSee('Abu Science College')
+            ->assertSee('READERS ARE LEADERS')
+            ->assertSee('Building future leaders through knowledge, science and technology.');
     }
 }

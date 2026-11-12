@@ -23,7 +23,7 @@ class SiteCacheTest extends TestCase
     #[Test]
     public function an_admin_edit_shows_up_immediately_even_though_pages_are_cached(): void
     {
-        $this->get('/')->assertOk()->assertSee('Determined to make a difference');
+        $this->get('/')->assertOk()->assertSee('READERS ARE LEADERS');
 
         $settings = SchoolSettings::query()->orderBy('id')->first();
         $settings->forceFill(['motto' => 'A brand new motto'])->save();

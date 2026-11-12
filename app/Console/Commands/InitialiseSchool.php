@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\AuditLog;
+use App\Models\HeroSlide;
 use App\Models\User;
 use Illuminate\Console\Command;
 use Illuminate\Database\Eloquent\Builder;
@@ -19,7 +20,7 @@ class InitialiseSchool extends Command
 
     public function handle(): int
     {
-        if (! Role::query()->where('guard_name', 'web')->exists()) {
+        if (! Role::query()->where('guard_name', 'web')->exists() || ! HeroSlide::query()->exists()) {
             $this->info('Seeding roles, public content and academic defaults...');
             $this->call('db:seed', ['--force' => true]);
         } else {
