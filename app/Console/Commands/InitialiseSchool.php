@@ -3,6 +3,7 @@
 namespace App\Console\Commands;
 
 use App\Models\AuditLog;
+use App\Models\CmsPage;
 use App\Models\HeroSlide;
 use App\Models\User;
 use Illuminate\Console\Command;
@@ -20,11 +21,15 @@ class InitialiseSchool extends Command
 
     public function handle(): int
     {
-        if (! Role::query()->where('guard_name', 'web')->exists() || ! HeroSlide::query()->exists()) {
+        if (! Role::query()->where('guard_name', 'web')->exists() || ! HeroSlide::query()->exists() || ! CmsPage::query()->exists()) {
             $this->info('Seeding roles, public content and academic defaults...');
             $this->call('db:seed', ['--force' => true]);
         } else {
             $this->call('db:seed', ['--class' => 'Database\\Seeders\\DesignRefreshSeeder', '--force' => true]);
+        }
+
+        if (app()->environment('production') && filter_var(env('SCHOOL_DEMO_DATA_ENABLED', false), FILTER_VALIDATE_BOOLEAN)) {
+            $this->call('db:seed', ['--class' => 'Database\\Seeders\\DemoReportCardSeeder', '--force' => true]);
         }
 
         $this->bootstrapAdmin();
