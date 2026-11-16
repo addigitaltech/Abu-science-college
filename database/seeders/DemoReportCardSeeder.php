@@ -41,7 +41,7 @@ class DemoReportCardSeeder extends Seeder
                 ['level' => 'senior secondary', 'is_active' => true],
             );
 
-            $student = Student::query()->updateOrCreate(
+            $student = Student::withTrashed()->updateOrCreate(
                 ['student_number' => 'ASC-DEMO-2627-001'],
                 [
                     'first_name' => 'Demo',
@@ -50,6 +50,9 @@ class DemoReportCardSeeder extends Seeder
                     'status' => 'active',
                 ],
             );
+            if ($student->trashed()) {
+                $student->restore();
+            }
 
             // These eight subjects illustrate the results system, using only subjects named in the supplied profile.
             // The school's final list and these sample marks must be confirmed before treating them as real records.
