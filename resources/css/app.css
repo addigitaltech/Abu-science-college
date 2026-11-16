@@ -606,9 +606,9 @@ dialog.lightbox::backdrop { background: rgba(2, 8, 20, .82); }
 
 /* ---------- Footer ---------- */
 .site-footer { margin-top: clamp(2.2rem, 4vw, 3.4rem); background: var(--navy-900); color: var(--on-dark); }
-.footer-grid { display: grid; gap: 2rem; padding-block: 3rem 2.2rem; grid-template-columns: 1fr; }
-@media (min-width: 600px) { .footer-grid { grid-template-columns: 1fr 1fr; } }
-@media (min-width: 1000px) { .footer-grid { grid-template-columns: 1.45fr repeat(var(--footer-cols, 4), 1fr); gap: 2.2rem; } }
+.footer-grid { display: grid; align-items: start; gap: 2rem; padding-block: 3rem 2.2rem; grid-template-columns: 1fr; }
+@media (min-width: 600px) { .footer-grid { grid-template-columns: repeat(auto-fit, minmax(min(100%, 12rem), 1fr)); } }
+.footer-grid > * { min-width: 0; overflow-wrap: anywhere; }
 .footer-brand { display: flex; align-items: center; gap: .8rem; color: #fff; text-decoration: none; }
 .footer-brand img { height: 56px; width: auto; padding: 4px; border-radius: 8px; background: #fff; }
 .footer-brand span { display: block; font: 600 1.2rem/1.1 var(--font-display); letter-spacing: .02em; text-transform: uppercase; max-width: 9rem; }
@@ -620,7 +620,7 @@ dialog.lightbox::backdrop { background: rgba(2, 8, 20, .82); }
 .footer-links a { font-size: .86rem; color: var(--on-dark); text-decoration: none; }
 .footer-links a:hover { color: #fff; text-decoration: underline; text-underline-offset: 3px; }
 .footer-links a[aria-current='page'] { color: var(--gold-400); }
-.footer-contact li { display: flex; gap: .65rem; align-items: flex-start; font-size: .86rem; }
+.footer-contact li { display: flex; gap: .65rem; align-items: flex-start; min-width: 0; font-size: .86rem; overflow-wrap: anywhere; }
 .footer-contact .icon { margin-top: .2rem; width: 1rem; height: 1rem; color: var(--gold-400); }
 .footer-contact a { color: var(--on-dark); text-decoration: none; }
 .footer-contact a:hover { color: #fff; }

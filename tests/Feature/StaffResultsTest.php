@@ -72,6 +72,29 @@ class StaffResultsTest extends TestCase
     }
 
     #[Test]
+    public function a_subject_can_be_created_for_multiple_classes_without_server_errors(): void
+    {
+        $created = Subject::createForClasses([
+            'code' => 'BIO',
+            'name' => 'Biology',
+            'status' => 'active',
+        ], [$this->class->id, $this->otherClass->id]);
+
+        $this->assertCount(2, $created);
+        $this->assertSame(['BIO-JSS1', 'BIO-JSS2'], $created->pluck('code')->all());
+        $this->assertEqualsCanonicalizing([$this->class->id, $this->otherClass->id], $created->pluck('school_class_id')->all());
+
+        $retry = Subject::createForClasses([
+            'code' => 'BIO',
+            'name' => 'Biology',
+            'status' => 'active',
+        ], [$this->class->id, $this->otherClass->id]);
+
+        $this->assertCount(0, $retry);
+        $this->assertSame(2, Subject::query()->where('name', 'Biology')->count());
+    }
+
+    #[Test]
     public function a_teacher_cannot_enter_scores_for_a_class_they_do_not_teach(): void
     {
         $this->actingAs($this->teacher)

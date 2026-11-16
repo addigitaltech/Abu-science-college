@@ -3,7 +3,7 @@
     $currentPath = $currentPath ?? trim(request()->path(), '/');
 @endphp
 <footer class="site-footer">
-    <div class="site-container footer-grid" style="--footer-cols: {{ count($footerSections) + 2 }}">
+    <div class="site-container footer-grid">
         <div>
             <a class="footer-brand" href="{{ route('home') }}" aria-label="{{ $settings->school_name }} home">
                 @if($logoUrl)<img src="{{ $logoUrl }}" alt="" width="50" height="56">@endif

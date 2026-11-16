@@ -1,99 +1,111 @@
 <?php
 
-namespace App\Filament\Resources;
+namespace App\Models;
 
-use App\Filament\Resources\SubjectResource\Pages;
-use App\Models\Subject;
-use Filament\Forms;
-use Filament\Forms\Form;
-use Filament\Forms\Get;
-use Filament\Forms\Set;
-use Filament\Tables;
-use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
+use Illuminate\Validation\ValidationException;
 
-class SubjectResource extends AuthorizedResource
+class Subject extends Model
 {
-    protected static ?string $requiredPermission = 'manage academic structure';
-    protected static ?int $navigationSort = 5;
-    protected static ?string $navigationLabel = 'Subjects';
-    protected static ?string $navigationGroup = 'Classes & subjects';
-    protected static ?string $model = Subject::class;
-    protected static ?string $navigationIcon = 'heroicon-o-book-open';
-    public static function form(Form $form): Form
+    protected $fillable = ['code', 'name', 'school_class_id', 'arm_id', 'status'];
+
+    /**
+     * Create one class-scoped subject record per selected class.
+     * Existing matching records are skipped, making retries safe.
+     *
+     * @param array<string, mixed> $attributes
+     * @param array<int, int|string> $classIds
+     * @return Collection<int, self>
+     */
+    public static function createForClasses(array $attributes, array $classIds): Collection
     {
-        $activeClasses = fn () => \App\Models\SchoolClass::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id');
+        $classIds = collect($classIds)
+            ->filter(fn ($id) => is_numeric($id) && (int) $id > 0)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values();
 
-        return $form->schema([
-            Forms\Components\TextInput::make('code')->maxLength(40)->unique(ignoreRecord: true)
-                ->helperText('When a subject goes to several classes, the class name is added to the code, for example MTH-JSS1.'),
-            Forms\Components\TextInput::make('name')->required()->maxLength(140),
+        if ($classIds->isEmpty()) {
+            return collect();
+        }
 
-            // Creating: pick one, several or all classes. One subject record is made for each class.
-            Forms\Components\Select::make('class_ids')
-                ->label('Classes (leave blank for a shared subject)')
-                ->multiple()
-                ->options($activeClasses)
-                ->searchable()
-                ->preload()
-                ->live()
-                ->afterStateUpdated(fn (Set $set) => $set('arm_id', null))
-                ->visible(fn (string $operation) => $operation === 'create')
-                ->helperText('Choose one class, a few classes, or use Select all.')
-                ->suffixAction(
-                    Forms\Components\Actions\Action::make('selectAllClasses')
-                        ->label('Select all')
-                        ->icon('heroicon-o-check-circle')
-                        ->action(fn (Set $set) => $set('class_ids', \App\Models\SchoolClass::query()->where('is_active', true)->pluck('id')->map(fn ($id) => (string) $id)->all())),
-                ),
+        $classes = SchoolClass::query()->whereIn('id', $classIds)->orderBy('id')->get();
+        if ($classes->count() !== $classIds->count()) {
+            throw ValidationException::withMessages(['class_ids' => 'One or more selected classes are no longer available.']);
+        }
 
-            // Editing: change this record's class, and optionally copy the subject into more classes.
-            Forms\Components\Select::make('school_class_id')->label('Class (leave blank for shared subject)')
-                ->relationship('schoolClass', 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true))
-                ->searchable()->preload()->live()
-                ->afterStateUpdated(fn (Set $set) => $set('arm_id', null))
-                ->visible(fn (string $operation) => $operation === 'edit'),
+        $created = collect();
+        DB::transaction(function () use ($attributes, $classes, $created): void {
+            $baseCode = trim((string) ($attributes['code'] ?? ''));
+            $baseAttributes = collect($attributes)->only(['name', 'status'])->all();
+            $armId = $attributes['arm_id'] ?? null;
 
-            Forms\Components\Select::make('arm_id')->label('Arm (optional)')
-                ->options(function (Get $get) {
-                    $classId = $get('school_class_id') ?: (($get('class_ids') ?? [])[0] ?? null);
-                    if (! $classId) {
-                        return [];
-                    }
-                    return \App\Models\Arm::query()->whereHas('classes', fn ($query) => $query->whereKey($classId))->orderBy('name')->pluck('name', 'id');
-                })
-                ->searchable()->placeholder('All arms')
-                ->visible(fn (Get $get, string $operation) => $operation === 'edit' || count($get('class_ids') ?? []) === 1),
+            foreach ($classes as $class) {
+                $existing = static::query()
+                    ->where('name', $baseAttributes['name'] ?? '')
+                    ->where('school_class_id', $class->id)
+                    ->when($armId === null, fn ($query) => $query->whereNull('arm_id'), fn ($query) => $query->where('arm_id', $armId))
+                    ->first();
 
-            Forms\Components\Select::make('more_class_ids')
-                ->label('Also add this subject to more classes')
-                ->multiple()
-                ->options(function (?\App\Models\Subject $record) use ($activeClasses) {
-                    $options = $activeClasses();
-                    if (! $record) {
-                        return $options;
-                    }
-                    $taken = \App\Models\Subject::query()->where('name', $record->name)->whereNull('arm_id')->pluck('school_class_id')->all();
-                    return $options->except(array_merge($taken, [$record->school_class_id]));
-                })
-                ->searchable()->preload()
-                ->visible(fn (string $operation) => $operation === 'edit')
-                ->helperText('Classes that already have this subject are not listed.'),
+                if ($existing) {
+                    continue;
+                }
 
-            Forms\Components\Select::make('status')->options(['active' => 'Active', 'inactive' => 'Inactive'])->default('active')->required(),
-        ])->columns(2);
+                $code = $baseCode === '' ? null : static::uniqueClassCode($baseCode, (string) $class->name, (int) $class->id);
+                $created->push(static::query()->create($baseAttributes + [
+                    'code' => $code,
+                    'school_class_id' => $class->id,
+                    'arm_id' => $armId,
+                ]));
+            }
+        });
+
+        return $created;
     }
 
-    public static function table(Table $table): Table
+    private static function uniqueClassCode(string $baseCode, string $className, int $classId): string
     {
-        return $table->modifyQueryUsing(fn ($query) => $query->with(['schoolClass', 'arm']))->columns([
-            Tables\Columns\TextColumn::make('code')->searchable(),
-            Tables\Columns\TextColumn::make('name')->searchable()->sortable(),
-            Tables\Columns\TextColumn::make('schoolClass.name')->label('Class')->sortable(),
-            Tables\Columns\TextColumn::make('arm.name')->label('Arm'),
-            Tables\Columns\TextColumn::make('status')->badge()->sortable(),
-        ])->filters([Tables\Filters\SelectFilter::make('school_class_id')->label('Class')->relationship('schoolClass', 'name')])->actions([Tables\Actions\EditAction::make()])->bulkActions([]);
+        $suffix = Str::upper(Str::slug($className, ''));
+        $suffix = $suffix !== '' ? $suffix : 'CLASS'.$classId;
+        $code = static::withClassSuffix($baseCode, $suffix);
+
+        if (static::query()->where('code', $code)->exists()) {
+            $code = static::withClassSuffix($baseCode, 'C'.$classId);
+        }
+
+        if (static::query()->where('code', $code)->exists()) {
+            throw ValidationException::withMessages(['code' => 'A unique code could not be generated for one of the selected classes. Please use a different subject code.']);
+        }
+
+        return $code;
     }
 
-    public static function getRelations(): array { return []; }
-    public static function getPages(): array { return ['index' => Pages\ListSubjects::route('/'), 'create' => Pages\CreateSubject::route('/create'), 'edit' => Pages\EditSubject::route('/{record}/edit')]; }
+    private static function withClassSuffix(string $baseCode, string $suffix): string
+    {
+        $tail = '-'.$suffix;
+        $prefix = rtrim(substr($baseCode, 0, 40 - strlen($tail)), '-');
+
+        return $prefix.$tail;
+    }
+
+    protected static function booted(): void
+    {
+        static::saving(function (self $subject): void {
+            if (! in_array($subject->status, ['active', 'inactive'], true)) {
+                throw ValidationException::withMessages(['status' => 'Choose a valid subject status.']);
+            }
+
+            if ($subject->arm_id && (! $subject->school_class_id || ! SchoolClass::query()->whereKey($subject->school_class_id)->whereHas('arms', fn ($query) => $query->whereKey($subject->arm_id))->exists())) {
+                throw ValidationException::withMessages(['arm_id' => 'Choose an arm belonging to the selected class.']);
+            }
+        });
+    }
+
+    public function schoolClass() { return $this->belongsTo(SchoolClass::class); }
+    public function arm() { return $this->belongsTo(Arm::class); }
+    public function teacherAssignments() { return $this->hasMany(TeacherAssignment::class); }
+    public function results() { return $this->hasMany(Result::class); }
 }
