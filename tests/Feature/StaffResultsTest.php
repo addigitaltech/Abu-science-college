@@ -13,8 +13,11 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\TeacherAssignment;
 use App\Models\User;
+use App\Filament\Resources\SubjectResource;
+use App\Filament\Resources\SubjectResource\Pages\EditSubject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
+use Livewire\Livewire;
 use Tests\TestCase;
 
 class StaffResultsTest extends TestCase
@@ -92,6 +95,80 @@ class StaffResultsTest extends TestCase
 
         $this->assertCount(0, $retry);
         $this->assertSame(2, Subject::query()->where('name', 'Biology')->count());
+    }
+
+    #[Test]
+    public function a_subject_edit_page_lists_its_classes_and_can_remove_one_assignment(): void
+    {
+        $subjects = Subject::createForClasses([
+            'code' => 'CHEM',
+            'name' => 'Chemistry',
+            'status' => 'active',
+        ], [$this->class->id, $this->otherClass->id]);
+        $admin = User::factory()->create();
+        $admin->assignRole('Super Admin');
+
+        Livewire::actingAs($admin)
+            ->test(EditSubject::class, ['record' => $subjects->first()->id])
+            ->assertSee('Currently added classes')
+            ->assertSee('JSS1')
+            ->assertSee('JSS2')
+            ->callAction('removeClassAssignment', ['class_id' => $this->otherClass->id]);
+
+        $this->assertDatabaseHas('subjects', ['id' => $subjects->first()->id, 'school_class_id' => $this->class->id]);
+        $this->assertDatabaseMissing('subjects', ['id' => $subjects->last()->id]);
+        $this->assertSame(1, Subject::query()->where('name', 'Chemistry')->count());
+    }
+
+    #[Test]
+    public function removing_the_class_open_in_edit_redirects_to_a_remaining_assignment(): void
+    {
+        $subjects = Subject::createForClasses([
+            'code' => 'PHYS',
+            'name' => 'Physics',
+            'status' => 'active',
+        ], [$this->class->id, $this->otherClass->id]);
+        $admin = User::factory()->create();
+        $admin->assignRole('Super Admin');
+
+        Livewire::actingAs($admin)
+            ->test(EditSubject::class, ['record' => $subjects->first()->id])
+            ->callAction('removeClassAssignment', ['class_id' => $this->class->id])
+            ->assertRedirect(SubjectResource::getUrl('edit', ['record' => $subjects->last()]));
+
+        $this->assertDatabaseMissing('subjects', ['id' => $subjects->first()->id]);
+        $this->assertDatabaseHas('subjects', ['id' => $subjects->last()->id, 'school_class_id' => $this->otherClass->id]);
+    }
+
+    #[Test]
+    public function removing_a_class_with_teacher_history_keeps_the_record_and_deactivates_it(): void
+    {
+        $subjects = Subject::createForClasses([
+            'code' => 'BIO',
+            'name' => 'Biology',
+            'status' => 'active',
+        ], [$this->class->id, $this->otherClass->id]);
+        $assignmentToRemove = $subjects->last();
+        $teacherId = Teacher::query()->where('user_id', $this->teacher->id)->value('id');
+        TeacherAssignment::query()->create([
+            'teacher_id' => $teacherId,
+            'school_class_id' => $this->otherClass->id,
+            'arm_id' => null,
+            'subject_id' => $assignmentToRemove->id,
+        ]);
+        $admin = User::factory()->create();
+        $admin->assignRole('Super Admin');
+
+        Livewire::actingAs($admin)
+            ->test(EditSubject::class, ['record' => $subjects->first()->id])
+            ->callAction('removeClassAssignment', ['class_id' => $this->otherClass->id]);
+
+        $this->assertDatabaseHas('subjects', [
+            'id' => $assignmentToRemove->id,
+            'school_class_id' => $this->otherClass->id,
+            'status' => 'inactive',
+        ]);
+        $this->assertDatabaseHas('teacher_assignments', ['subject_id' => $assignmentToRemove->id]);
     }
 
     #[Test]

@@ -10,6 +10,7 @@ use Filament\Forms\Get;
 use Filament\Forms\Set;
 use Filament\Tables;
 use Filament\Tables\Table;
+use Illuminate\Support\HtmlString;
 
 class SubjectResource extends AuthorizedResource
 {
@@ -51,6 +52,41 @@ class SubjectResource extends AuthorizedResource
                 ->relationship('schoolClass', 'name', modifyQueryUsing: fn ($query) => $query->where('is_active', true))
                 ->searchable()->preload()->live()
                 ->afterStateUpdated(fn (Set $set) => $set('arm_id', null))
+                ->visible(fn (string $operation) => $operation === 'edit'),
+
+            Forms\Components\Placeholder::make('current_class_assignments')
+                ->label('Currently added classes')
+                ->content(function (?Subject $record): string|HtmlString {
+                    if (! $record) {
+                        return 'Save the subject first to manage its class assignments.';
+                    }
+
+                    $assignments = Subject::query()
+                        ->with(['schoolClass', 'arm'])
+                        ->where('name', $record->name)
+                        ->where('arm_id', $record->arm_id)
+                        ->whereNotNull('school_class_id')
+                        ->orderBy('school_class_id')
+                        ->get();
+
+                    if ($assignments->isEmpty()) {
+                        return 'No class-specific assignments. This subject is shared.';
+                    }
+
+                    $items = $assignments->map(function (Subject $assignment): string {
+                        $label = $assignment->schoolClass?->name ?? 'Unknown class';
+                        if ($assignment->arm) {
+                            $label .= ' — '.$assignment->arm->name;
+                        }
+                        if ($assignment->status !== 'active') {
+                            $label .= ' (inactive; history retained)';
+                        }
+
+                        return '<li>'.e($label).'</li>';
+                    })->implode('');
+
+                    return new HtmlString('<ul class="list-disc space-y-1 pl-5">'.$items.'</ul>');
+                })
                 ->visible(fn (string $operation) => $operation === 'edit'),
 
             Forms\Components\Select::make('arm_id')->label('Arm (optional)')
