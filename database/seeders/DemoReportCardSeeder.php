@@ -67,11 +67,27 @@ class DemoReportCardSeeder extends Seeder
                 'Civic Education' => [32, 55],
             ];
             $calculator = new ResultCalculator();
+            $demoSubjectIds = [];
+
             foreach ($marks as $name => [$ca1, $exam]) {
-                $subject = Subject::query()->firstOrCreate(
-                    ['name' => $name, 'school_class_id' => $class->id, 'arm_id' => null],
-                    ['code' => 'DEMO-'.strtoupper(substr(sha1($name), 0, 7)), 'status' => 'active'],
-                );
+                $subject = Subject::query()
+                    ->where('name', $name)
+                    ->where('school_class_id', $class->id)
+                    ->whereNull('arm_id')
+                    ->orderBy('id')
+                    ->first();
+
+                if (! $subject) {
+                    $subject = Subject::query()->create([
+                        'name' => $name,
+                        'school_class_id' => $class->id,
+                        'arm_id' => null,
+                        'code' => 'DEMO-'.strtoupper(substr(sha1($name), 0, 7)),
+                        'status' => 'active',
+                    ]);
+                }
+
+                $demoSubjectIds[] = $subject->id;
                 $calculated = $calculator->calculate(['ca1' => $ca1, 'exam' => $exam]);
                 Result::query()->updateOrCreate(
                     [
@@ -96,6 +112,13 @@ class DemoReportCardSeeder extends Seeder
                     ],
                 );
             }
+
+            Result::query()
+                ->where('student_id', $student->id)
+                ->where('academic_session_id', $session->id)
+                ->where('academic_term_id', $term->id)
+                ->whereNotIn('subject_id', $demoSubjectIds)
+                ->delete();
 
             $ratings = [
                 'Attendance' => 4,
