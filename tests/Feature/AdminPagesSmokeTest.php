@@ -4,6 +4,9 @@ namespace Tests\Feature;
 
 use App\Filament\Resources\AcademicSessionResource\Pages\ListAcademicSessions;
 use App\Filament\Resources\AcademicTermResource\Pages\ListAcademicTerms;
+use App\Filament\Resources\AcademicTermResource;
+use App\Models\AcademicSession;
+use App\Models\AcademicTerm;
 use App\Models\User;
 use Filament\Facades\Filament;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,6 +70,23 @@ class AdminPagesSmokeTest extends TestCase
 
         Livewire::test(ListAcademicSessions::class)->assertTableBulkActionDoesNotExist('delete');
         Livewire::test(ListAcademicTerms::class)->assertTableBulkActionDoesNotExist('delete');
+    }
+
+    #[Test]
+    public function academic_terms_show_session_names_and_clear_term_labels(): void
+    {
+        $session = AcademicSession::query()->create(['name' => '2026/2027', 'is_active' => true]);
+        AcademicTerm::query()->create(['academic_session_id' => $session->id, 'name' => 'First Term', 'sequence' => 1]);
+
+        $this->actingAs($this->admin)->get(AcademicTermResource::getUrl('index'))
+            ->assertOk()
+            ->assertSee('Academic session')
+            ->assertSee('2026/2027');
+
+        $this->actingAs($this->admin)->get(AcademicTermResource::getUrl('create'))
+            ->assertOk()
+            ->assertSee('Academic session')
+            ->assertSee('Term order (1–3)');
     }
 
     #[Test]

@@ -52,8 +52,8 @@ class PaymentHistory extends Page implements HasForms
                 Forms\Components\Select::make('class_id')->label('Class')->options(fn () => SchoolClass::query()->orderBy('name')->pluck('name', 'id'))->placeholder('All classes')->live()->afterStateUpdated(fn (Set $set) => $set('arm_id', null)),
                 Forms\Components\Select::make('arm_id')->label('Arm')->options(fn (Get $get) => Arm::query()->whereHas('classes', fn ($query) => $query->whereKey($get('class_id')))->orderBy('name')->pluck('name', 'id'))->placeholder('All arms')->live(),
                 Forms\Components\Select::make('status')->label('Show')->options(['successful' => 'Verified payments', 'pending' => 'Awaiting verification', 'failed' => 'Failed', 'refunded' => 'Refunded', 'all' => 'Everything'])->default('successful')->required()->live(),
-                Forms\Components\TextInput::make('q')->label('Search student name, Student ID or reference')->maxLength(80)->live(onBlur: true),
-            ])->columns(3),
+                Forms\Components\TextInput::make('q')->label('Search student name, Student ID or reference')->maxLength(80)->live(onBlur: true)->columnSpanFull(),
+            ])->columns(['default' => 1, 'md' => 2, '2xl' => 3]),
         ])->statePath('data');
     }
 

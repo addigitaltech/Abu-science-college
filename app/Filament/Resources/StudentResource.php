@@ -103,19 +103,21 @@ class StudentResource extends AuthorizedResource
             Tables\Actions\Action::make('enterResult')->label('Enter result')->icon('heroicon-o-pencil-square')->color('success')
                 ->url(fn (Student $record) => route('staff.results.student', $record))
                 ->visible(fn () => (bool) auth()->user()?->can('manage results')),
-            Tables\Actions\Action::make('printResult')->label('Print result')->icon('heroicon-o-printer')->color('info')
-                ->url(function (Student $record) {
-                    $term = \App\Models\AcademicTerm::query()->where('is_current', true)->first();
+            Tables\Actions\ActionGroup::make([
+                Tables\Actions\Action::make('printResult')->label('Print result')->icon('heroicon-o-printer')->color('info')
+                    ->url(function (Student $record) {
+                        $term = \App\Models\AcademicTerm::query()->where('is_current', true)->first();
 
-                    return $term ? route('reports.show', ['student' => $record->id, 'term' => $term->id]) : null;
-                }, shouldOpenInNewTab: true)
-                ->visible(fn () => (bool) auth()->user()?->can('manage results')),
-            Tables\Actions\Action::make('issuePin')->label('PIN slip')->icon('heroicon-o-key')->color('warning')
-                ->requiresConfirmation()
-                ->modalHeading('Issue a new PIN')
-                ->modalDescription('This creates a new 6-digit PIN for the student (any earlier PIN stops working) and downloads a printable slip. The PIN is shown only on that slip.')
-                ->action(fn (Student $record) => static::pinSlipsResponse(collect([$record])))
-                ->visible(fn () => (bool) auth()->user()?->can('manage students')),
+                        return $term ? route('reports.show', ['student' => $record->id, 'term' => $term->id]) : null;
+                    }, shouldOpenInNewTab: true)
+                    ->visible(fn () => (bool) auth()->user()?->can('manage results')),
+                Tables\Actions\Action::make('issuePin')->label('PIN slip')->icon('heroicon-o-key')->color('warning')
+                    ->requiresConfirmation()
+                    ->modalHeading('Issue a new PIN')
+                    ->modalDescription('This creates a new 6-digit PIN for the student (any earlier PIN stops working) and downloads a printable slip. The PIN is shown only on that slip.')
+                    ->action(fn (Student $record) => static::pinSlipsResponse(collect([$record])))
+                    ->visible(fn () => (bool) auth()->user()?->can('manage students')),
+            ])->label('More')->icon('heroicon-m-ellipsis-horizontal'),
             Tables\Actions\EditAction::make(),
         ])->bulkActions([
             Tables\Actions\BulkAction::make('graduate')->label('Graduate and archive')->icon('heroicon-o-academic-cap')->color('gray')

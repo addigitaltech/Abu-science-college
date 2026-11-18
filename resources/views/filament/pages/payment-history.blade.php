@@ -1,4 +1,14 @@
 <x-filament-panels::page>
+    <style>
+        .finance-table-scroll{max-height:min(58vh,640px);overflow:auto;border:1px solid rgba(120,120,120,.22);border-radius:.6rem;overscroll-behavior:contain}
+        .finance-table-scroll table{min-width:860px;width:100%;border-collapse:separate;border-spacing:0;font-size:.875rem}
+        .finance-table-scroll th{position:sticky;top:0;z-index:2;background:rgb(248 250 252);text-align:left;border-bottom:1px solid rgba(120,120,120,.35)}
+        .finance-table-scroll th:first-child,.finance-table-scroll td:first-child{position:sticky;left:0;z-index:1;background:rgb(255 255 255);box-shadow:1px 0 0 rgba(120,120,120,.16)}
+        .finance-table-scroll th:first-child{z-index:3;background:rgb(248 250 252)}
+        .finance-table-scroll th,.finance-table-scroll td{padding:.55rem .65rem;white-space:nowrap}
+        .finance-scroll-hint{display:none;margin:.2rem 0 .5rem;font-size:.75rem;opacity:.72}
+        @media(max-width:1279px){.finance-scroll-hint{display:block}}
+    </style>
     {{ $this->form }}
 
     @php($report = $this->report())
@@ -20,8 +30,9 @@
     </x-filament::section>
 
     <x-filament::section heading="Payments" :description="$report['payments']->count().' shown (the printout and spreadsheet list all of them)'">
-        <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <p class="finance-scroll-hint">Scroll within the table to view all payment details; the date and headings stay visible.</p>
+        <div class="finance-table-scroll" role="region" aria-label="Payments list; scroll to view all columns" tabindex="0">
+            <table>
                 <thead><tr style="text-align:left;border-bottom:1px solid rgba(120,120,120,.35)"><th style="padding:.4rem">Date</th><th style="padding:.4rem">Student</th><th style="padding:.4rem">Class</th><th style="padding:.4rem">Method</th><th style="padding:.4rem">Receipt</th><th style="padding:.4rem">Status</th><th style="padding:.4rem;text-align:right">Amount</th></tr></thead>
                 <tbody>
                 @forelse($report['payments']->sortByDesc('created_at')->take(100) as $payment)
@@ -43,8 +54,9 @@
     </x-filament::section>
 
     <x-filament::section heading="Who still owes" :description="'Unpaid and part-paid fees. Total NGN '.$money($report['debtTotals']['balance'])">
-        <div style="overflow-x:auto">
-            <table style="width:100%;border-collapse:collapse;font-size:.85rem">
+        <p class="finance-scroll-hint">Scroll within the table to view all balance details; student names and headings stay visible.</p>
+        <div class="finance-table-scroll" role="region" aria-label="Outstanding fees list; scroll to view all columns" tabindex="0">
+            <table>
                 <thead><tr style="text-align:left;border-bottom:1px solid rgba(120,120,120,.35)"><th style="padding:.4rem">Student</th><th style="padding:.4rem">Class</th><th style="padding:.4rem">Unpaid fees</th><th style="padding:.4rem;text-align:right">Charged</th><th style="padding:.4rem;text-align:right">Paid</th><th style="padding:.4rem;text-align:right">Balance</th></tr></thead>
                 <tbody>
                 @forelse($report['debts']->take(100) as $row)

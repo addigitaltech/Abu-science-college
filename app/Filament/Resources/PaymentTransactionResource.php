@@ -25,16 +25,22 @@ class PaymentTransactionResource extends AuthorizedResource
     {
         return $table->modifyQueryUsing(fn ($query) => $query->with('student'))->columns([
             Tables\Columns\TextColumn::make('student_label')->label('Student')->state(fn (PaymentTransaction $record) => $record->student?->fullName() ?? '—'),
-            Tables\Columns\TextColumn::make('gateway')->badge(),
-            Tables\Columns\TextColumn::make('reference')->searchable()->copyable(),
+            Tables\Columns\TextColumn::make('gateway')->badge()->toggleable(isToggledHiddenByDefault: true),
+            Tables\Columns\TextColumn::make('reference')->searchable()->copyable()->limit(28)->tooltip(fn (PaymentTransaction $record) => $record->reference),
             Tables\Columns\TextColumn::make('amount')->money('NGN')->sortable(),
             Tables\Columns\TextColumn::make('status')->badge()->sortable(),
             Tables\Columns\TextColumn::make('refund_status')->badge()->sortable(),
-            Tables\Columns\TextColumn::make('refund_provider_status')->toggleable(),
-            Tables\Columns\TextColumn::make('refund_reference')->toggleable(),
+            Tables\Columns\TextColumn::make('refund_provider_status')->toggleable(isToggledHiddenByDefault: true),
+            Tables\Columns\TextColumn::make('refund_reference')->toggleable(isToggledHiddenByDefault: true)->limit(24)->tooltip(fn (PaymentTransaction $record) => $record->refund_reference),
             Tables\Columns\TextColumn::make('created_at')->dateTime()->sortable(),
-            Tables\Columns\TextColumn::make('refund_requested_at')->dateTime()->toggleable(),
-            Tables\Columns\TextColumn::make('refunded_at')->dateTime()->toggleable(),
+            Tables\Columns\TextColumn::make('refund_requested_at')->dateTime()->toggleable(isToggledHiddenByDefault: true),
+            Tables\Columns\TextColumn::make('refunded_at')->dateTime()->toggleable(isToggledHiddenByDefault: true),
+        ])->filters([
+            Tables\Filters\SelectFilter::make('status')
+                ->options(fn (): array => PaymentTransaction::query()->distinct()->orderBy('status')->pluck('status', 'status')->all()),
+            Tables\Filters\SelectFilter::make('refund_status')
+                ->label('Refund status')
+                ->options(fn (): array => PaymentTransaction::query()->distinct()->orderBy('refund_status')->pluck('refund_status', 'refund_status')->filter()->all()),
         ])->actions([
             Tables\Actions\Action::make('requestFullRefund')->label('Request full refund')->icon('heroicon-o-arrow-uturn-left')->color('danger')->requiresConfirmation()
                 ->modalHeading('Request a full provider refund?')

@@ -3,6 +3,7 @@
 @endphp
 <div class="broadsheet-table-wrap">
     <table class="broadsheet-table">
+        <caption class="sr-only">Class broadsheet with student totals and per-subject scores</caption>
         <thead>
             <tr>
                 <th>Student</th>
@@ -19,10 +20,12 @@
             @forelse($rows as $row)
                 @forelse($row['subjects'] as $subjectRow)
                     <tr>
-                        <td>@if($loop->first)<strong>{{ $row['student']->last_name }}, {{ $row['student']->first_name }} {{ $row['student']->other_names }}</strong><small>{{ $row['student']->student_number }}</small>@endif</td>
-                        <td>@if($loop->first){{ $fmt($row['total']) }}@endif</td>
-                        <td>@if($loop->first){{ $fmt($row['average']) }}@endif</td>
-                        <td>@if($loop->first){{ $isAdmin ? ($row['position'] ?? '—') : '—' }}@endif</td>
+                        @if($loop->first)
+                            <td rowspan="{{ max(1, count($row['subjects'])) }}"><strong>{{ $row['student']->last_name }}, {{ $row['student']->first_name }} {{ $row['student']->other_names }}</strong><small>{{ $row['student']->student_number }}</small></td>
+                            <td rowspan="{{ max(1, count($row['subjects'])) }}">{{ $fmt($row['total']) }}</td>
+                            <td rowspan="{{ max(1, count($row['subjects'])) }}">{{ $fmt($row['average']) }}</td>
+                            <td rowspan="{{ max(1, count($row['subjects'])) }}">{{ $isAdmin ? ($row['position'] ?? '—') : '—' }}</td>
+                        @endif
                         <td>{{ $subjectRow['subject']->name }}</td>
                         <td>{{ $fmt($subjectRow['ca1']) }}</td><td>{{ $fmt($subjectRow['ca2']) }}</td><td>{{ $fmt($subjectRow['ca3']) }}</td><td>{{ $fmt($subjectRow['exam']) }}</td>
                         <td><strong>{{ $subjectRow['total'] !== null ? $fmt($subjectRow['total']) : ($subjectRow['not_offered'] ? 'N/O' : '—') }}</strong></td>

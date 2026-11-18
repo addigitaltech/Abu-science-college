@@ -18,10 +18,10 @@ use Filament\Tables\Table;
 class AssessmentConfigResource extends AuthorizedResource
 {
     protected static ?string $requiredPermission = 'manage academic structure';
-    protected static bool $shouldRegisterNavigation = false;
+    protected static bool $shouldRegisterNavigation = true;
     protected static ?int $navigationSort = 5;
-    protected static ?string $navigationLabel = 'Assessment setup (raw)';
-    protected static ?string $navigationGroup = 'Advanced';
+    protected static ?string $navigationLabel = 'Assessment setup';
+    protected static ?string $navigationGroup = 'Classes & subjects';
     protected static ?string $model = AssessmentConfig::class;
     protected static ?string $navigationIcon = 'heroicon-o-adjustments-horizontal';
     public static function form(Form $form): Form
@@ -46,8 +46,8 @@ class AssessmentConfigResource extends AuthorizedResource
             Tables\Columns\TextColumn::make('schoolClass.name')->label('Class'),
             Tables\Columns\TextColumn::make('subject.name')->label('Subject'),
             Tables\Columns\TextColumn::make('ca1_max')->label('CA1')->numeric(),
-            Tables\Columns\TextColumn::make('ca2_max')->label('CA2')->numeric(),
-            Tables\Columns\TextColumn::make('ca3_max')->label('CA3')->numeric(),
+            Tables\Columns\TextColumn::make('ca2_max')->label('CA2')->numeric()->toggleable(isToggledHiddenByDefault: true),
+            Tables\Columns\TextColumn::make('ca3_max')->label('CA3')->numeric()->toggleable(isToggledHiddenByDefault: true),
             Tables\Columns\TextColumn::make('exam_max')->label('Exam')->numeric(),
         ])->actions([Tables\Actions\EditAction::make()])->bulkActions([]);
     }

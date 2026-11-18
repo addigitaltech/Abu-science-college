@@ -19,7 +19,7 @@ class ClassTeacherResource extends AuthorizedResource
     protected static ?string $requiredPermission = 'manage teachers';
     protected static ?int $navigationSort = 5;
     protected static ?string $navigationLabel = 'Class teachers';
-    protected static ?string $navigationGroup = 'Students & staff';
+    protected static ?string $navigationGroup = 'Classes & subjects';
     protected static ?string $model = ClassTeacher::class;
     protected static ?string $navigationIcon = 'heroicon-o-user-group';
 

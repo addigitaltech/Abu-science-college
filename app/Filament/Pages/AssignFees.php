@@ -53,7 +53,7 @@ class AssignFees extends Page implements HasForms
                 Forms\Components\Select::make('fee_type_id')->label('Type of fee')->options(fn () => FeeType::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))->searchable()->required()
                     ->createOptionForm([Forms\Components\TextInput::make('name')->required()->maxLength(120)])
                     ->createOptionUsing(fn (array $data) => FeeType::query()->create(['name' => $data['name'], 'is_active' => true])->getKey()),
-                Forms\Components\TextInput::make('amount_due')->label('Amount for each student (naira)')->numeric()->minValue(0.01)->maxValue(100000000)->required()->prefix('₦'),
+                Forms\Components\TextInput::make('amount_due')->label('Amount for each student (naira)')->numeric()->minValue(0.01)->maxValue(100000000)->required()->prefix('₦')->live(onBlur: true),
                 Forms\Components\DatePicker::make('due_date')->label('Pay by'),
                 Forms\Components\Select::make('academic_session_id')->label('Session')->options(fn () => AcademicSession::query()->orderByDesc('id')->pluck('name', 'id'))->required()->live()->afterStateUpdated(fn (Set $set) => $set('academic_term_id', null)),
                 Forms\Components\Select::make('academic_term_id')->label('Term (optional)')->options(fn (Get $get) => AcademicTerm::query()->where('academic_session_id', $get('academic_session_id'))->orderBy('sequence')->pluck('name', 'id'))->placeholder('Whole session'),
@@ -63,6 +63,23 @@ class AssignFees extends Page implements HasForms
                 Forms\Components\Select::make('class_ids')->label('Classes')->multiple()->options(fn () => SchoolClass::query()->where('is_active', true)->orderBy('name')->pluck('name', 'id'))->required()->live()->afterStateUpdated(fn (Set $set) => $set('arm_id', null)),
                 Forms\Components\Select::make('arm_id')->label('Only this arm (optional)')->options(fn (Get $get) => Arm::query()->whereHas('classes', fn ($query) => $query->whereIn('school_classes.id', (array) $get('class_ids')))->orderBy('name')->pluck('name', 'id'))->placeholder('All arms'),
             ])->columns(2),
+            Forms\Components\Placeholder::make('charge_preview')
+                ->label('Pre-charge impact')
+                ->content(function (Get $get): string {
+                    $classIds = array_values(array_filter(array_map('intval', (array) $get('class_ids'))));
+                    $amount = (float) ($get('amount_due') ?? 0);
+                    if ($classIds === [] || $amount <= 0) {
+                        return 'Choose one or more classes and enter the per-student amount to preview the active-student count and estimated total.';
+                    }
+
+                    $students = Student::query()->where('status', 'active')
+                        ->whereIn('school_class_id', $classIds)
+                        ->when($get('arm_id'), fn ($query, $armId) => $query->where('arm_id', (int) $armId))
+                        ->count();
+
+                    return number_format($students).' active student(s) in the selected scope; up to ₦'.number_format($students * $amount, 2).' in total. Existing matching fees will be skipped.';
+                })
+                ->columnSpanFull(),
         ])->statePath('data');
     }
 

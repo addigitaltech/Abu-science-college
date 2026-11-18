@@ -42,24 +42,34 @@ class AuditLogResource extends AuthorizedResource
     public static function table(Table $table): Table
     {
         return $table
+            ->modifyQueryUsing(fn ($query) => $query->with('actor'))
             ->columns([
-                Tables\Columns\TextColumn::make('actor_id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('actor.name')
+                    ->label('Staff member')
+                    ->default('System')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('event')
                     ->searchable(),
                 Tables\Columns\TextColumn::make('subject_type')
-                    ->searchable(),
+                    ->searchable()
+                    ->formatStateUsing(fn (?string $state): string => $state ? class_basename($state) : '—')
+                    ->limit(24)
+                    ->tooltip(fn (AuditLog $record) => $record->subject_type),
                 Tables\Columns\TextColumn::make('subject_id')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('ip_address')
-                    ->searchable(),
+                    ->searchable()
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('user_agent')
-                    ->searchable(),
+                    ->searchable()
+                    ->limit(30)
+                    ->tooltip(fn (AuditLog $record) => $record->user_agent)
+                    ->toggleable(isToggledHiddenByDefault: true),
                 Tables\Columns\TextColumn::make('created_at')
                     ->dateTime()
-                    ->sortable()
-                    ->toggleable(isToggledHiddenByDefault: true),
+                    ->label('When')
+                    ->sortable(),
             ])
             ->filters([
                 //

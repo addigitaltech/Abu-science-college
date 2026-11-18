@@ -40,17 +40,17 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogoHeight('2.6rem')
             ->favicon(fn () => ($path = SchoolSettings::current()->favicon_path) ? \App\Support\MediaUrl::for($path) : null)
             ->colors([
-                'primary' => Color::Red,
+                'primary' => Color::Blue,
                 'info' => Color::Blue,
                 'warning' => Color::Amber,
             ])
             ->navigationGroups([
                 NavigationGroup::make('Students & staff'),
                 NavigationGroup::make('Results'),
-                NavigationGroup::make('Fees & payments'),
+                NavigationGroup::make('Fees & payments')->collapsed(),
                 NavigationGroup::make('Classes & subjects')->collapsed(),
-                NavigationGroup::make('Admissions & messages'),
-                NavigationGroup::make('Website'),
+                NavigationGroup::make('Admissions & messages')->collapsed(),
+                NavigationGroup::make('Website')->collapsed(),
                 NavigationGroup::make('Homepage & menus')->collapsed(),
                 NavigationGroup::make('Settings')->collapsed(),
                 NavigationGroup::make('Advanced')->collapsed(),

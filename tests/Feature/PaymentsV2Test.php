@@ -269,10 +269,14 @@ class PaymentsV2Test extends TestCase
         $this->actingAs($admin);
 
         $form = ['fee_type_id' => $bus->id, 'amount_due' => 12000, 'academic_session_id' => $session->id, 'class_ids' => [$class->id]];
-        Livewire::test(AssignFees::class)->fillForm($form + ['arm_id' => $red->id])->call('save');
+        Livewire::test(AssignFees::class)->fillForm($form + ['arm_id' => $red->id])
+            ->assertSee('1 active student(s)')
+            ->call('save');
         $this->assertSame(1, StudentFeeAssignment::query()->where('fee_type_id', $bus->id)->count());
 
-        Livewire::test(AssignFees::class)->fillForm($form)->call('save'); // whole class: the Red student is skipped
+        Livewire::test(AssignFees::class)->fillForm($form)
+            ->assertSee('2 active student(s)')
+            ->call('save'); // whole class: the Red student is skipped
         $this->assertSame(2, StudentFeeAssignment::query()->where('fee_type_id', $bus->id)->count());
         $this->assertSame(2, StudentFeeAssignment::query()->where('fee_type_id', $bus->id)->where('amount_paid', 0)->count());
     }

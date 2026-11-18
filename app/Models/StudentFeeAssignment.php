@@ -44,6 +44,10 @@ class StudentFeeAssignment extends Model
             $assignment->assigned_by = auth()->id();
         });
         static::saving(function (self $assignment): void {
+            // The saving event runs before creating, so establish the default before validating.
+            if (! $assignment->exists) {
+                $assignment->status ??= 'unpaid';
+            }
             if (! in_array($assignment->status, ['unpaid', 'overdue', 'partial', 'paid'], true)) {
                 throw ValidationException::withMessages(['status' => 'Invalid fee assignment status.']);
             }

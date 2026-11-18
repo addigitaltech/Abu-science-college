@@ -71,6 +71,26 @@ table { border-collapse: collapse; width: 100%; }
 .sign td { padding-top: 24px; text-align: center; font-size: 8px; color: #566070; }
 .sign td span { display: block; border-top: 1px solid #555; padding-top: 3px; margin: 0 14px; }
 .foot { margin: 6px 0 0; text-align: center; color: #8a8580; font-size: 7px; }
+@media screen {
+    body { background: #f3f5f8; font-size: 13px; }
+    .toolbar, .banner, .sheet { max-width: 1120px; }
+    .sheet { padding: 20px 24px; background: #fff; box-shadow: 0 8px 28px rgba(4, 20, 51, .10); border-radius: 10px; }
+    .school h1 { font-size: 25px; }
+    .school .motto { font-size: 11px; }
+    .school .meta, .bio td { font-size: 12px; }
+    .panel > .cap { font-size: 10px; padding: 6px 8px; }
+    .grid th { font-size: 10px; padding: 6px 5px; }
+    .grid td { font-size: 11px; padding: 6px 5px; }
+    .grid td.sub { font-size: 10px; }
+    .grid--wide th, .grid--wide td { font-size: 9px; padding: 5px 3px; }
+    .grid--wide td.sub { font-size: 9px; }
+    .stat td { font-size: 10px; padding: 7px 8px; }
+    .bars td { font-size: 9px; padding: 4px 6px; }
+    .ratings th, .ratings td { font-size: 10px; padding: 5px 6px; }
+    .remark { font-size: 10px; padding: 6px 8px; }
+    .key, .foot { font-size: 9px; }
+    .sign td { font-size: 10px; }
+}
 @media print { .toolbar, .banner { display: none !important; } .sheet { padding: 0; max-width: none; } }
 </style>
 </head>

@@ -25,18 +25,30 @@ class AcademicTermResource extends AuthorizedResource
     {
         return $form
             ->schema([
-                Forms\Components\TextInput::make('academic_session_id')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\TextInput::make('name')
-                    ->required(),
-                Forms\Components\TextInput::make('sequence')
-                    ->required()
-                    ->numeric(),
-                Forms\Components\Toggle::make('is_current')
-                    ->required(),
-                Forms\Components\DatePicker::make('starts_on'),
-                Forms\Components\DatePicker::make('ends_on'),
+                Forms\Components\Section::make('Term details')->schema([
+                    Forms\Components\Select::make('academic_session_id')
+                        ->label('Academic session')
+                        ->relationship('session', 'name')
+                        ->searchable()
+                        ->preload()
+                        ->required(),
+                    Forms\Components\TextInput::make('name')
+                        ->label('Term name')
+                        ->required(),
+                    Forms\Components\TextInput::make('sequence')
+                        ->label('Term order (1–3)')
+                        ->helperText('First, second, or third term.')
+                        ->required()
+                        ->numeric()
+                        ->minValue(1)
+                        ->maxValue(3),
+                    Forms\Components\Toggle::make('is_current')
+                        ->label('Current term')
+                        ->helperText('Only one term per academic session can be current.')
+                        ->required(),
+                    Forms\Components\DatePicker::make('starts_on')->label('Start date'),
+                    Forms\Components\DatePicker::make('ends_on')->label('End date'),
+                ])->columns(2),
             ]);
     }
 
@@ -44,8 +56,8 @@ class AcademicTermResource extends AuthorizedResource
     {
         return $table
             ->columns([
-                Tables\Columns\TextColumn::make('academic_session_id')
-                    ->numeric()
+                Tables\Columns\TextColumn::make('session.name')
+                    ->label('Academic session')
                     ->sortable(),
                 Tables\Columns\TextColumn::make('name')
                     ->searchable(),
@@ -70,7 +82,9 @@ class AcademicTermResource extends AuthorizedResource
                     ->toggleable(isToggledHiddenByDefault: true),
             ])
             ->filters([
-                //
+                Tables\Filters\SelectFilter::make('academic_session_id')
+                    ->label('Academic session')
+                    ->relationship('session', 'name'),
             ])
             ->actions([
                 Tables\Actions\EditAction::make(),

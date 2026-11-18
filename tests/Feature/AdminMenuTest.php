@@ -33,6 +33,7 @@ class AdminMenuTest extends TestCase
             ->assertSee('Students &amp; staff', false)
             ->assertSee('Fees &amp; payments', false)
             ->assertSee('Classes &amp; subjects', false)
+            ->assertSee('Assessment setup')
             ->assertSee('Graduated students (archive)');
     }
 

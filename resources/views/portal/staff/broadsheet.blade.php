@@ -3,11 +3,11 @@
 @section('content')
 @include('portal.staff._head', ['title' => 'Class results broadsheet', 'subtitle' => 'Review score lines, subject averages and positions for a selected session, term, class and arm', 'current' => 'broadsheet'])
 <style>
-    .broadsheet-table-wrap{overflow-x:auto}.broadsheet-table{width:100%;border-collapse:collapse;font-size:.78rem;min-width:1050px}
+    .broadsheet-table-wrap{overflow:auto;max-height:min(70vh,760px);border:1px solid #d6dce5;border-radius:8px;overscroll-behavior:contain}.broadsheet-table{width:100%;border-collapse:separate;border-spacing:0;font-size:.78rem;min-width:1050px}
     .broadsheet-table th,.broadsheet-table td{border:1px solid #d6dce5;padding:.38rem .42rem;text-align:center;vertical-align:middle;white-space:nowrap}
-    .broadsheet-table th{background:#102744;color:#fff;font-weight:700}.broadsheet-table td:first-child{text-align:left;min-width:140px;white-space:normal}
+    .broadsheet-table th{position:sticky;top:0;z-index:2;background:#102744;color:#fff;font-weight:700}.broadsheet-table th:first-child{left:0;z-index:4}.broadsheet-table td:first-child{position:sticky;left:0;z-index:1;background:#fff;text-align:left;min-width:180px;white-space:normal}.broadsheet-table tbody tr:nth-child(even) td:first-child{background:#f6f8fb}
     .broadsheet-table small{display:block;color:#68768a;font-size:.68rem}.broadsheet-table tbody tr:nth-child(even){background:#f6f8fb}.broadsheet-table .empty{text-align:center;padding:1rem;color:#68768a}
-    @media print{.no-print,.portal-head,.portal-nav,.site-header,.site-footer{display:none!important}.portal-body{padding:0!important}.site-container{max-width:none!important;padding:0!important}.panel{border:0!important;box-shadow:none!important}.broadsheet-table{font-size:7pt;min-width:0}.broadsheet-table th,.broadsheet-table td{padding:2px 3px}.broadsheet-table-wrap{overflow:visible}}
+    @media print{.no-print,.portal-head,.portal-nav,.site-header,.site-footer{display:none!important}.portal-body{padding:0!important}.site-container{max-width:none!important;padding:0!important}.panel{border:0!important;box-shadow:none!important}.broadsheet-table{font-size:7pt;min-width:0}.broadsheet-table th,.broadsheet-table td{position:static!important;padding:2px 3px}.broadsheet-table-wrap{max-height:none;overflow:visible;border:0}}
 </style>
 <div class="portal-body"><div class="site-container">
     <div class="panel no-print"><div class="panel__body">
@@ -34,6 +34,7 @@
             <div><h2>{{ $class->name }}@if($armId) · {{ $class->arms->firstWhere('id', $armId)?->name }}@else · All arms @endif</h2><p class="muted" style="margin:.25rem 0 0">{{ $term->session?->name }} · {{ $term->name }} @if($subjects->isNotEmpty()) · {{ $subjects->count() }} subject(s)@endif</p></div>
             <div class="no-print" style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn--navy" onclick="window.print()">Print</button><a class="btn btn--green" href="{{ request()->fullUrlWithQuery(['download' => 'pdf']) }}">Download PDF</a></div>
         </div><div class="panel__body">
+            <p class="muted" style="font-size:.8rem;margin:0 0 .5rem">Scroll inside the table to view all subjects and students. Student names and column headings stay visible while you move across the results.</p>
             @include('portal.staff._broadsheet-table')
             <p class="muted" style="font-size:.8rem;margin:.75rem 0 0">Averages and positions use offered result lines in the selected class/arm. Tied scores share a competition position and the next position is skipped. Missing scores are not treated as zero.</p>
         </div></div>
