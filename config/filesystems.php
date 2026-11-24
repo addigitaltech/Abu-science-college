@@ -1,5 +1,19 @@
 <?php
 
+$publicDriver = env('PUBLIC_FILESYSTEM_DRIVER', 'local');
+$studentPhotoDriver = env('STUDENT_PHOTOS_DRIVER', $publicDriver === 's3' ? 's3' : 'local');
+$r2Options = [
+    'key' => env('R2_ACCESS_KEY_ID'),
+    'secret' => env('R2_SECRET_ACCESS_KEY'),
+    'region' => env('R2_REGION', 'auto'),
+    'bucket' => env('R2_BUCKET'),
+    'endpoint' => env('R2_ENDPOINT'),
+    'use_path_style_endpoint' => env('R2_USE_PATH_STYLE_ENDPOINT', false),
+    'options' => ['before_upload' => [\App\Support\R2ObjectAcl::class, 'remove']],
+    'throw' => true,
+    'report' => false,
+];
+
 return [
 
     /*
@@ -13,7 +27,7 @@ return [
     |
     */
 
-    'default' => env('FILESYSTEM_DISK', 'local'),
+    'default' => env('FILESYSTEM_DISK', 'public'),
 
     /*
     |--------------------------------------------------------------------------
@@ -38,11 +52,31 @@ return [
             'report' => false,
         ],
 
-        'public' => [
+        'public' => array_merge([
+            'driver' => $publicDriver,
+            'root' => storage_path('app/public'),
+            'url' => env('PUBLIC_FILESYSTEM_URL', rtrim(env('APP_URL', 'http://localhost'), '/').'/storage'),
+            'visibility' => env('PUBLIC_FILESYSTEM_VISIBILITY', $publicDriver === 's3' ? 'private' : 'public'),
+            'throw' => $publicDriver === 's3',
+            'report' => false,
+        ], $publicDriver === 's3' ? $r2Options + [
+            'root' => env('R2_PUBLIC_PREFIX', ''),
+            'visibility' => env('PUBLIC_FILESYSTEM_VISIBILITY', 'private'),
+        ] : []),
+        'student_photos' => array_merge([
+            'driver' => $studentPhotoDriver,
+            'root' => storage_path('app/private/student-photos'),
+            'visibility' => 'private',
+            'serve' => true,
+            'throw' => $studentPhotoDriver === 's3',
+            'report' => false,
+        ], $studentPhotoDriver === 's3' ? $r2Options + [
+            'root' => env('R2_PRIVATE_PREFIX', 'private'),
+            'visibility' => 'private',
+        ] : []),
+        'legacy_public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => rtrim(env('APP_URL', 'http://localhost'), '/').'/storage',
-            'visibility' => 'public',
             'throw' => false,
             'report' => false,
         ],

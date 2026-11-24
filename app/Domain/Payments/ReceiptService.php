@@ -4,6 +4,7 @@ namespace App\Domain\Payments;
 
 use App\Models\PaymentReceipt;
 use App\Models\SchoolSettings;
+use App\Support\MediaContent;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Support\Facades\Storage;
 
@@ -38,7 +39,8 @@ final class ReceiptService
             'balance' => FeeBalance::forStudent((int) $transaction->student_id),
             'settings' => $settings,
             'isPdf' => $isPdf,
-            'logoPath' => $logo ? Storage::disk('public')->path($logo) : null,
+            'logoPath' => $logo,
+            'logoDataUri' => $isPdf ? MediaContent::dataUri('public', $logo) : null,
             'logoUrl' => $logo ? \App\Support\MediaUrl::for($logo) : null,
         ];
     }

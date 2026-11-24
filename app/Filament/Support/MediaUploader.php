@@ -21,7 +21,7 @@ final class MediaUploader
 
         $mime = (string) $disk->mimeType($path);
         $size = (int) $disk->size($path);
-        $isRealImage = @getimagesize($disk->path($path)) !== false;
+        $isRealImage = @getimagesizefromstring($disk->get($path)) !== false;
         if (! $isRealImage || ! in_array($mime, self::ALLOWED, true) || $size > 5 * 1024 * 1024) {
             $disk->delete($path);
             throw ValidationException::withMessages(['file' => 'Please upload a real JPEG, PNG, WebP or GIF picture of at most 5 MB.']);

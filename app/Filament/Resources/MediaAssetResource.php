@@ -20,7 +20,7 @@ class MediaAssetResource extends AuthorizedResource
     public static function form(Form $form): Form
     {
         return $form->schema([
-            Forms\Components\FileUpload::make('path')->label('Upload image or PDF')->disk('public')->directory('media-library')->visibility('public')->storeFileNamesIn('original_name')->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'])->maxSize(10240)->required()->columnSpanFull(),
+            Forms\Components\FileUpload::make('path')->label('Upload image or PDF')->disk('public')->directory('media-library')->storeFileNamesIn('original_name')->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp', 'image/gif', 'application/pdf'])->maxSize(10240)->required()->columnSpanFull(),
             Forms\Components\TextInput::make('alt_text')->maxLength(250)->helperText('Required for meaningful public images.'),
             Forms\Components\TextInput::make('caption')->maxLength(500),
             Forms\Components\KeyValue::make('metadata')->keyLabel('Key')->valueLabel('Value')->columnSpanFull(),

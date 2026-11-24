@@ -28,7 +28,7 @@ tfoot td { font-weight: bold; background: #f9f9f9; }
 @if(! $isPdf)<div class="toolbar"><button type="button" onclick="window.print()">Print</button> <a href="{{ $pdfUrl }}">Download PDF</a> <a href="{{ route('finance.report', array_filter($filters, fn ($v) => $v !== null && $v !== '') + ['download' => 'csv']) }}">Download spreadsheet (CSV)</a></div>@endif
 <div class="sheet">
     <table class="box"><tr>
-        <td style="width:70px">@if($isPdf && $logoPath)<img src="file://{{ $logoPath }}" style="height:50px">@endif</td>
+        <td style="width:70px">@if($isPdf && ($logoDataUri ?? null))<img src="{{ $logoDataUri }}" style="height:50px">@endif</td>
         <td><h1>{{ $settings->school_name }}</h1><div class="muted">Payment history and outstanding fees &middot; printed {{ now()->format('M j, Y g:i A') }}</div></td>
         <td class="num muted">
             @if($filters['from'] ?? null) From {{ \Illuminate\Support\Carbon::parse($filters['from'])->format('M j, Y') }}@endif

@@ -27,6 +27,12 @@ class MediaAsset extends Model
 
     public function url(): string
     {
-        return $this->disk === 'public' ? (string) \App\Support\MediaUrl::for($this->path) : Storage::disk($this->disk)->url($this->path);
+        if ($this->disk === 'student_photos') {
+            return route('media.student-photo', ['mediaAsset' => $this->getKey()]);
+        }
+
+        return $this->disk === 'public'
+            ? (string) \App\Support\MediaUrl::for($this->path)
+            : Storage::disk($this->disk)->url($this->path);
     }
 }

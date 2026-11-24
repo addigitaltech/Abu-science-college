@@ -102,6 +102,11 @@ class ResultCheckController extends Controller
         abort_if(PortalAccess::feesBlockResults($student), 403);
 
         $data = $builder->build($student, $term, false);
+        if ($student->photo?->disk === 'student_photos') {
+            $data['photoUrl'] = URL::temporarySignedRoute('media.student-photo.shared', now()->addMinute(), [
+                'mediaAsset' => $student->photo->getKey(),
+            ]);
+        }
         if ($request->query('download') === 'pdf') {
             AuditLog::record(null, 'results.public_report_downloaded', $student, ['term_id' => $term->id]);
 

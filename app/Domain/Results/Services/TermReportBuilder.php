@@ -11,6 +11,7 @@ use App\Models\SchoolClass;
 use App\Models\SchoolSettings;
 use App\Models\Student;
 use App\Models\TermRemark;
+use App\Support\MediaContent;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Storage;
 
@@ -173,14 +174,11 @@ final class TermReportBuilder
             ->sortBy(fn (AffectiveRating $rating) => $rating->trait?->sort_order ?? 0)
             ->values();
 
-        $logoPath = $settings->logo_path ? Storage::disk('public')->path($settings->logo_path) : null;
-        if (! $logoPath || ! is_file($logoPath)) {
-            $logoPath = null;
-        }
-        $photoPath = $student->photo?->path ? Storage::disk('public')->path($student->photo->path) : null;
-        if (! $photoPath || ! is_file($photoPath)) {
-            $photoPath = null;
-        }
+        $logoPath = $settings->logo_path;
+        $logoDataUri = MediaContent::dataUri('public', $logoPath);
+        $photo = $student->photo;
+        $photoUrl = $photo?->url();
+        $photoDataUri = $photo ? MediaContent::dataUri($photo->disk, $photo->path, $photo->mime_type) : null;
 
         return [
             'student' => $student,
@@ -214,7 +212,9 @@ final class TermReportBuilder
             'teacherRemark' => $remarks?->teacher_remark,
             'principalRemark' => $remarks?->principal_remark,
             'logoPath' => $logoPath,
-            'photoPath' => $photoPath,
+            'logoDataUri' => $logoDataUri,
+            'photoUrl' => $photoUrl,
+            'photoDataUri' => $photoDataUri,
         ];
     }
 

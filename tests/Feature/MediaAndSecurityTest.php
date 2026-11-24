@@ -6,10 +6,12 @@ use App\Domain\Website\PictureLibrary;
 use App\Filament\Pages\SecurityCheck;
 use App\Models\MediaAsset;
 use App\Models\User;
+use App\Support\MediaContent;
 use App\Support\MediaUrl;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\URL;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 use ZipArchive;
@@ -77,6 +79,42 @@ class MediaAndSecurityTest extends TestCase
     }
 
     #[Test]
+    public function private_student_portraits_require_a_valid_short_lived_signed_url(): void
+    {
+        Storage::fake('student_photos');
+        Storage::disk('student_photos')->put('student-passports/private.png', base64_decode(self::PNG));
+        $asset = MediaAsset::query()->create(['original_name' => 'private.png', 'path' => 'student-passports/private.png', 'disk' => 'student_photos', 'mime_type' => 'image/png', 'size_bytes' => 70]);
+
+        $this->get(route('media.student-photo.shared', ['mediaAsset' => $asset->id]))->assertForbidden();
+        $url = URL::temporarySignedRoute('media.student-photo.shared', now()->addMinute(), ['mediaAsset' => $asset->id]);
+        $this->get($url)->assertOk()->assertHeader('Cache-Control', 'no-store, private');
+        $this->get($url.'&tampered=1')->assertForbidden();
+    }
+
+    #[Test]
+    public function stored_images_can_be_embedded_in_pdfs_without_a_local_filesystem_path(): void
+    {
+        Storage::fake('student_photos');
+        Storage::disk('student_photos')->put('student-passports/pdf.png', base64_decode(self::PNG));
+
+        $dataUri = MediaContent::dataUri('student_photos', 'student-passports/pdf.png', 'image/png');
+
+        $this->assertNotNull($dataUri);
+        $this->assertStringStartsWith('data:image/png;base64,', $dataUri);
+    }
+
+    #[Test]
+    public function the_r2_upload_callback_removes_unsupported_object_acl_parameters(): void
+    {
+        $command = new \Aws\Command('PutObject', ['ACL' => 'private', 'Bucket' => 'private-bucket']);
+
+        \App\Support\R2ObjectAcl::remove($command);
+
+        $this->assertFalse($command->hasParam('ACL'));
+        $this->assertSame('private-bucket', $command['Bucket']);
+    }
+
+    #[Test]
     public function the_picture_check_lists_pictures_the_database_points_to_that_are_not_on_disk(): void
     {
         MediaAsset::query()->create(['original_name' => 'gone.jpg', 'path' => 'student-passports/gone.jpg', 'disk' => 'public', 'mime_type' => 'image/jpeg', 'size_bytes' => 10]);
@@ -90,11 +128,14 @@ class MediaAndSecurityTest extends TestCase
     #[Test]
     public function the_picture_zip_contains_the_pictures_and_a_manifest(): void
     {
+        Storage::fake('student_photos');
+        Storage::disk('student_photos')->put('student-passports/private.png', base64_decode(self::PNG));
         $tmp = app(PictureLibrary::class)->zip();
         $zip = new ZipArchive();
         $zip->open($tmp);
 
         $this->assertNotFalse($zip->locateName('test-media/pixel.png'));
+        $this->assertNotFalse($zip->locateName('private-student-photos/student-passports/private.png'));
         $this->assertNotFalse($zip->locateName('manifest.csv'));
         $zip->close();
         @unlink($tmp);
@@ -104,6 +145,7 @@ class MediaAndSecurityTest extends TestCase
     public function loading_a_picture_zip_keeps_safe_pictures_and_refuses_scripts_traversal_and_fake_pictures(): void
     {
         Storage::fake('public');
+        Storage::fake('student_photos');
         $zipPath = tempnam(sys_get_temp_dir(), 'zip');
         $zip = new ZipArchive();
         $zip->open($zipPath, ZipArchive::OVERWRITE);
@@ -112,20 +154,23 @@ class MediaAndSecurityTest extends TestCase
         $zip->addFromString('../escape.png', base64_decode(self::PNG));
         $zip->addFromString('gallery/.hidden.png', base64_decode(self::PNG));
         $zip->addFromString('gallery/fake.png', '<?php system($_GET["c"]); ?>');
+        $zip->addFromString('student-passports/private.png', base64_decode(self::PNG));
         $zip->close();
 
         $result = app(PictureLibrary::class)->import($zipPath);
 
-        $this->assertSame(1, $result['added']);
+        $this->assertSame(2, $result['added']);
         $this->assertCount(4, $result['rejected']);
         Storage::disk('public')->assertExists('gallery/ok.png');
+        Storage::disk('student_photos')->assertExists('student-passports/private.png');
+        Storage::disk('public')->assertMissing('student-passports/private.png');
         Storage::disk('public')->assertMissing('gallery/shell.php');
         Storage::disk('public')->assertMissing('gallery/fake.png');
 
         // Loading the same ZIP again never overwrites what is there.
         $again = app(PictureLibrary::class)->import($zipPath);
         $this->assertSame(0, $again['added']);
-        $this->assertSame(1, $again['skipped']);
+        $this->assertSame(2, $again['skipped']);
         @unlink($zipPath);
     }
 

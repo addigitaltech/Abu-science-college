@@ -53,16 +53,18 @@ class StudentResource extends AuthorizedResource
                 ->helperText('Choose an existing photo, or use the + button to upload a passport photograph straight from this page.')
                 ->createOptionModalHeading('Upload passport photograph')
                 ->createOptionForm([
-                    Forms\Components\FileUpload::make('path')->label('Passport photograph (JPEG, PNG or WebP, up to 2 MB)')->disk('public')->directory('student-passports')->visibility('public')->storeFileNamesIn('original_name')->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->maxSize(2048)->required(),
+                    Forms\Components\FileUpload::make('path')->label('Passport photograph (JPEG, PNG or WebP, up to 2 MB)')->disk('student_photos')->directory('student-passports')->visibility('private')->storeFileNamesIn('original_name')->acceptedFileTypes(['image/jpeg', 'image/png', 'image/webp'])->maxSize(2048)->required(),
                 ])
                 ->createOptionUsing(function (array $data): int {
                     $path = (string) ($data['path'] ?? '');
-                    if (! str_starts_with($path, 'student-passports/') || str_contains($path, '..') || ! Storage::disk('public')->exists($path)) {
+                    $disk = Storage::disk('student_photos');
+                    if (! str_starts_with($path, 'student-passports/') || str_contains($path, '..') || ! $disk->exists($path)) {
                         throw ValidationException::withMessages(['path' => 'Choose a valid passport photograph to upload.']);
                     }
-                    $mime = Storage::disk('public')->mimeType($path) ?: '';
-                    if (! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) || Storage::disk('public')->size($path) > 2 * 1024 * 1024) {
-                        Storage::disk('public')->delete($path);
+                    $mime = $disk->mimeType($path) ?: '';
+                    $image = @getimagesizefromstring($disk->get($path));
+                    if (! $image || ! in_array($mime, ['image/jpeg', 'image/png', 'image/webp'], true) || $disk->size($path) > 2 * 1024 * 1024) {
+                        $disk->delete($path);
                         throw ValidationException::withMessages(['path' => 'The passport must be a JPEG, PNG or WebP image of 2 MB or less.']);
                     }
 
@@ -70,9 +72,9 @@ class StudentResource extends AuthorizedResource
                         'uploaded_by' => auth()->id(),
                         'original_name' => $data['original_name'] ?? basename($path),
                         'path' => $path,
-                        'disk' => 'public',
+                        'disk' => 'student_photos',
                         'mime_type' => $mime,
-                        'size_bytes' => Storage::disk('public')->size($path),
+                        'size_bytes' => $disk->size($path),
                         'alt_text' => 'Student passport photograph',
                     ])->getKey();
                 }),

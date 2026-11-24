@@ -27,7 +27,7 @@ h1 { margin: 0; font-size: 18px; color: #041433; text-transform: uppercase; }
 @if(! $isPdf)<div class="toolbar"><button type="button" onclick="window.print()">Print receipt</button> <a href="{{ route('receipts.show', ['receipt' => $receipt->receipt_number, 'download' => 'pdf']) }}">Download PDF</a></div>@endif
 <div class="sheet">
     <table><tr>
-        <td style="width:80px">@if($isPdf && $logoPath)<img src="file://{{ $logoPath }}" style="height:64px">@elseif(! $isPdf && $logoUrl)<img src="{{ $logoUrl }}" alt="" style="height:64px">@endif</td>
+        <td style="width:80px">@if($isPdf && ($logoDataUri ?? null))<img src="{{ $logoDataUri }}" style="height:64px">@elseif(! $isPdf && $logoUrl)<img src="{{ $logoUrl }}" alt="" style="height:64px">@endif</td>
         <td><h1>{{ $settings->school_name }}</h1><div class="muted">{{ $settings->address }}@if($settings->phone_primary) &middot; {{ $settings->phone_primary }}@endif @if($settings->email) &middot; {{ $settings->email }}@endif</div></td>
         <td style="text-align:right"><span class="stamp">PAID</span></td>
     </tr></table>

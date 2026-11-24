@@ -10,6 +10,7 @@ use App\Models\SchoolSettings;
 use Barryvdh\DomPDF\Facade\Pdf;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
+use App\Support\MediaContent;
 
 /** Printable payment history for a date range or a whole session (screen, PDF or spreadsheet). Finance staff only. */
 class FinanceReportController extends Controller
@@ -34,11 +35,12 @@ class FinanceReportController extends Controller
         }
 
         $settings = SchoolSettings::current();
-        $logo = $settings->logo_path && Storage::disk('public')->exists($settings->logo_path) ? Storage::disk('public')->path($settings->logo_path) : null;
+        $logo = $settings->logo_path;
         $data = $report + [
             'settings' => $settings,
             'isPdf' => ($filters['download'] ?? null) === 'pdf',
             'logoPath' => $logo,
+            'logoDataUri' => MediaContent::dataUri('public', $logo),
             'session' => ! empty($filters['session_id']) ? AcademicSession::query()->find($filters['session_id']) : null,
             'class' => ! empty($filters['class_id']) ? SchoolClass::query()->find($filters['class_id']) : null,
             'arm' => ! empty($filters['arm_id']) ? Arm::query()->find($filters['arm_id']) : null,

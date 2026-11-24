@@ -48,7 +48,6 @@ final class MediaField
                     ->maxSize(5120)
                     ->disk('public')
                     ->directory('media-library')
-                    ->visibility('public')
                     ->storeFileNamesIn('original_name')
                     ->required(),
                 TextInput::make('alt_text')->label('Short description of the picture (optional)')->maxLength(180),

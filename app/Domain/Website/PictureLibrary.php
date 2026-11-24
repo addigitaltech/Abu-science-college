@@ -44,20 +44,22 @@ final class PictureLibrary
                     continue;
                 }
                 $query = DB::table($table)->whereNotNull($column)->where($column, '!=', '');
-                if ($table === 'media_assets' && Schema::hasColumn('media_assets', 'disk')) {
-                    $query->where('disk', 'public');
-                }
-                foreach ($query->pluck($column) as $path) {
+                $values = $table === 'media_assets' && Schema::hasColumn('media_assets', 'disk')
+                    ? $query->get([$column, 'disk'])->map(fn ($row) => ['path' => $row->{$column}, 'disk' => $row->disk])
+                    : $query->pluck($column)->map(fn ($path) => ['path' => $path, 'disk' => 'public']);
+                foreach ($values as $value) {
+                    $path = $value['path'];
+                    $diskName = in_array($value['disk'], ['public', 'student_photos'], true) ? $value['disk'] : 'public';
                     $path = trim((string) $path);
                     if ($path === '' || preg_match('#^https?://#i', $path)) {
                         continue;
                     }
-                    $rows->push(['table' => $table, 'column' => $column, 'path' => $path, 'exists' => Storage::disk('public')->exists($path)]);
+                    $rows->push(['table' => $table, 'column' => $column, 'path' => $path, 'disk' => $diskName, 'exists' => Storage::disk($diskName)->exists($path)]);
                 }
             }
         }
 
-        return $rows->unique(fn ($row) => $row['path'])->values();
+        return $rows->unique(fn ($row) => $row['disk'].':'.$row['path'])->values();
     }
 
     public function missing(): Collection
@@ -65,11 +67,20 @@ final class PictureLibrary
         return $this->references()->where('exists', false)->values();
     }
 
-    /** Every picture file in the public disk. @return array<int, string> */
+    /** Every picture file in public storage and private student-photo storage. @return array<int, array{disk:string,path:string}> */
     public function files(): array
     {
-        return collect(Storage::disk('public')->allFiles())
-            ->filter(fn ($path) => in_array(strtolower(pathinfo($path, PATHINFO_EXTENSION)), self::ALLOWED, true) && ! str_contains($path, '/.') && ! str_starts_with($path, '.'))
+        return collect(['public', 'student_photos'])
+            ->flatMap(function (string $diskName): array {
+                try {
+                    return collect(Storage::disk($diskName)->allFiles())->map(fn ($path) => ['disk' => $diskName, 'path' => $path])->all();
+                } catch (\Throwable) {
+                    return [];
+                }
+            })
+            ->filter(fn ($file) => ! ($file['disk'] === 'public' && str_starts_with($file['path'], 'student-passports/')))
+            ->filter(fn ($file) => in_array(strtolower(pathinfo($file['path'], PATHINFO_EXTENSION)), self::ALLOWED, true) && ! str_contains($file['path'], '/.') && ! str_starts_with($file['path'], '.'))
+            ->unique(fn ($file) => $file['disk'].':'.$file['path'])
             ->values()->all();
     }
 
@@ -85,12 +96,14 @@ final class PictureLibrary
             throw ValidationException::withMessages(['zip' => 'The ZIP file could not be created.']);
         }
         $manifest = "path,used_by\n";
-        $used = $this->references()->groupBy('path');
-        foreach ($this->files() as $path) {
-            $full = Storage::disk('public')->path($path);
-            if (is_file($full)) {
-                $zip->addFile($full, $path);
-                $manifest .= '"'.str_replace('"', '""', $path).'","'.$used->get($path, collect())->map(fn ($row) => $row['table'].'.'.$row['column'])->implode(' ').'"'."\n";
+        $used = $this->references()->groupBy(fn ($row) => $row['disk'].':'.$row['path']);
+        foreach ($this->files() as $file) {
+            $path = $file['path'];
+            $content = Storage::disk($file['disk'])->get($path);
+            if (is_string($content)) {
+                $archivePath = $file['disk'] === 'student_photos' ? 'private-student-photos/'.$path : $path;
+                $zip->addFromString($archivePath, $content);
+                $manifest .= '"'.str_replace('"', '""', $path).'","'.$used->get($file['disk'].':'.$path, collect())->map(fn ($row) => $row['table'].'.'.$row['column'])->implode(' ').'"' ."\n";
             }
         }
         $zip->addFromString('manifest.csv', $manifest);
@@ -100,7 +113,7 @@ final class PictureLibrary
     }
 
     /**
-     * Unpack a ZIP of pictures into the public disk. Existing files are never overwritten.
+     * Unpack public assets into the public disk and student portraits into private storage. Existing files are never overwritten.
      *
      * @return array{added: int, skipped: int, rejected: array<int, string>}
      */
@@ -121,6 +134,11 @@ final class PictureLibrary
                 continue;
             }
             $clean = str_replace('\\', '/', $name);
+            $privatePrefix = 'private-student-photos/';
+            $isPrivate = str_starts_with($clean, $privatePrefix) || str_starts_with($clean, 'student-passports/');
+            if (str_starts_with($clean, $privatePrefix)) {
+                $clean = substr($clean, strlen($privatePrefix));
+            }
             $extension = strtolower(pathinfo($clean, PATHINFO_EXTENSION));
             // Plain relative paths only, with an allowed extension: no "..", no hidden files, no scripts.
             if ($clean === '' || str_starts_with($clean, '/') || str_contains($clean, '..') || preg_match('#(^|/)\.#', $clean) || strlen($clean) > 250 || ! in_array($extension, self::ALLOWED, true)) {
@@ -138,11 +156,24 @@ final class PictureLibrary
                 $rejected[] = $name.' (not a picture)';
                 continue;
             }
-            if (Storage::disk('public')->exists($clean)) {
+            $destination = Storage::disk($isPrivate ? 'student_photos' : 'public');
+            if ($isPrivate && ! str_starts_with($clean, 'student-passports/')) {
+                $rejected[] = $name;
+                continue;
+            }
+            if ($destination->exists($clean)) {
                 $skipped++;
                 continue;
             }
-            Storage::disk('public')->put($clean, $content);
+            $destination->put($clean, $content);
+            if ($isPrivate) {
+                $assetIds = DB::table('students')->where('photo_id', function ($query) use ($clean) {
+                    $query->select('id')->from('media_assets')->where('path', $clean)->limit(1);
+                })->pluck('photo_id');
+                if ($assetIds->isNotEmpty()) {
+                    DB::table('media_assets')->whereIn('id', $assetIds)->update(['disk' => 'student_photos']);
+                }
+            }
             $added++;
         }
         $zip->close();

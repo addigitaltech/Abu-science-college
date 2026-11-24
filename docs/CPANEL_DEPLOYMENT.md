@@ -50,7 +50,7 @@ In **cPanel > MySQL Databases**:
 1. Upload the release ZIP to `/home/USERNAME/`, not directly into `public_html`.
 2. Extract it into `/home/USERNAME/emmaculate`.
 3. Confirm that `/home/USERNAME/emmaculate/artisan` exists and that `/home/USERNAME/emmaculate/public/index.php` exists.
-4. Keep `storage/app` and the `.env` file outside the public document root.
+4. Keep `storage/app` and the `.env` file outside the public document root. By default public uploads remain on the local `public` disk, while student portraits use a private local disk under `storage/app/private/student-photos`; include all of `storage/app` in backups. Cloudflare R2 is optional on cPanel: leave `PUBLIC_FILESYSTEM_DRIVER=local` and `STUDENT_PHOTOS_DRIVER=local` unless the host is explicitly configured to use the variables in [`CLOUDFLARE_R2_STORAGE.md`](CLOUDFLARE_R2_STORAGE.md).
 5. Set the domain's document root to:
 
 ```text

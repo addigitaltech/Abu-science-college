@@ -6,7 +6,7 @@ use App\Support\MediaUrl;
 use Closure;
 use Illuminate\Http\Request;
 
-/** Makes Storage::disk('public')->url() (used by admin upload previews) match the address the site is opened on. */
+/** Makes storage previews use the active host and the same safe media-serving route. */
 class ConfigureMediaUrl
 {
     public function handle(Request $request, Closure $next)

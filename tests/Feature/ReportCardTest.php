@@ -25,6 +25,8 @@ class ReportCardTest extends TestCase
 {
     use RefreshDatabase;
 
+    private const PNG = 'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
     private AcademicSession $session;
     private AcademicTerm $first;
     private AcademicTerm $second;
@@ -84,6 +86,21 @@ class ReportCardTest extends TestCase
         $this->actingAs($this->admin)->get(route('reports.show', ['student' => $this->ada->id, 'term' => $this->first->id]))
             ->assertOk()
             ->assertSee('student-passports/ada.jpg', false);
+    }
+
+    #[Test]
+    public function the_pdf_report_embeds_a_private_student_portrait(): void
+    {
+        Storage::fake('student_photos');
+        Storage::disk('student_photos')->put('student-passports/ada.png', base64_decode(self::PNG));
+        $photo = MediaAsset::query()->create(['original_name' => 'ada.png', 'path' => 'student-passports/ada.png', 'disk' => 'student_photos', 'mime_type' => 'image/png', 'size_bytes' => strlen(base64_decode(self::PNG))]);
+        $this->ada->update(['photo_id' => $photo->id]);
+        $this->line($this->ada, $this->first, 60);
+
+        $response = $this->actingAs($this->admin)->get(route('reports.show', ['student' => $this->ada->id, 'term' => $this->first->id, 'download' => 'pdf']))
+            ->assertOk()->assertHeader('content-type', 'application/pdf');
+
+        $this->assertGreaterThan(500, strlen($response->getContent()));
     }
 
     #[Test]

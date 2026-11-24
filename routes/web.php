@@ -35,6 +35,10 @@ Route::get('/search', [SiteController::class, 'search'])->name('search');
 Route::get('/payments/return', [PaymentController::class, 'providerReturn'])->name('payments.return');
 // Uploaded pictures when the public/storage link is not available (XAMPP and some cheap hosts).
 Route::get('/media/{path}', [\App\Http\Controllers\MediaController::class, 'show'])->where('path', '.*')->middleware('throttle:600,1')->name('media.show');
+Route::get('/private-student-photo/{mediaAsset}', [\App\Http\Controllers\MediaController::class, 'sharedStudentPhoto'])
+    ->whereNumber('mediaAsset')->middleware(['signed', 'throttle:120,1'])->name('media.student-photo.shared');
+Route::middleware('auth')->get('/portal/private-student-photo/{mediaAsset}', [\App\Http\Controllers\MediaController::class, 'studentPhoto'])
+    ->whereNumber('mediaAsset')->middleware('throttle:600,1')->name('media.student-photo');
 
 Route::get('/portal', [PortalController::class, 'index'])->name('portal');
 Route::get('/designed-by', [SiteController::class, 'credit'])->name('credit');

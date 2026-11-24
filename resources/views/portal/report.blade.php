@@ -3,8 +3,8 @@
     $showCa3 = collect($rows)->contains(fn ($row) => ($row['maxima']['ca3'] ?? 0) > 0);
     $showCumulative = (int) $term->sequence > 1;
     $termSequences = collect($cumulativeTerms ?? [])->pluck('sequence')->map(fn ($sequence) => (int) $sequence)->values();
-    $logoSrc = $logoPath ? ($isPdf ? 'file://'.$logoPath : \App\Support\MediaUrl::for($settings->logo_path)) : null;
-    $photoSrc = $photoPath ? ($isPdf ? 'file://'.$photoPath : $student->photo?->url()) : null;
+    $logoSrc = $isPdf ? ($logoDataUri ?? null) : ($logoPath ? \App\Support\MediaUrl::for($settings->logo_path) : null);
+    $photoSrc = $isPdf ? ($photoDataUri ?? null) : ($photoUrl ?? null);
     $failGrade = collect($bands)->sortBy('min_score')->first()['grade'] ?? 'F';
     $labels = [1 => 'Fair', 2 => 'Pass', 3 => 'Good', 4 => 'Very Good', 5 => 'Excellent'];
     $hasPending = collect($rows)->contains(fn ($row) => $row['status'] !== 'published');

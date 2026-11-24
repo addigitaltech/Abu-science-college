@@ -2,17 +2,17 @@
 
 namespace App\Support;
 
-/**
- * The address of a picture or file the school uploaded. It works on every kind of hosting:
- *  - when the `public/storage` link exists (normal hosting) the file is served straight from there, which is fastest;
- *  - when it does not (XAMPP and many cheap hosts cannot make the link) the file is served through /media/..., so
- *    pictures never break just because `php artisan storage:link` was not run or APP_URL does not match the address
- *    the site is opened on.
- */
+use Illuminate\Support\Facades\Storage;
+
+/** Resolves public school media URLs on local hosts and R2-backed Render deployments. */
 final class MediaUrl
 {
     public static function base(): string
     {
+        if (config('filesystems.disks.public.driver') === 's3') {
+            return rtrim(url('/media'), '/');
+        }
+
         return is_dir(public_path('storage')) ? rtrim(asset('storage'), '/') : rtrim(url('media'), '/');
     }
 
