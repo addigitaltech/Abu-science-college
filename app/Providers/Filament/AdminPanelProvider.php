@@ -15,6 +15,7 @@ use Filament\Pages;
 use Filament\Panel;
 use Filament\PanelProvider;
 use Filament\Support\Colors\Color;
+use Filament\Support\Enums\MaxWidth;
 use Filament\Widgets;
 use Illuminate\Cookie\Middleware\AddQueuedCookiesToResponse;
 use Illuminate\Cookie\Middleware\EncryptCookies;
@@ -39,8 +40,15 @@ class AdminPanelProvider extends PanelProvider
             ->brandLogo(fn () => ($path = SchoolSettings::current()->logo_path) ? \App\Support\MediaUrl::for($path) : null)
             ->brandLogoHeight('2.6rem')
             ->favicon(fn () => ($path = SchoolSettings::current()->favicon_path) ? \App\Support\MediaUrl::for($path) : null)
+            ->font('Inter')
+            ->maxContentWidth(MaxWidth::Full)
+            ->sidebarCollapsibleOnDesktop()
             ->colors([
-                'primary' => Color::Blue,
+                // School navy (matches the website's --maroon-* / --navy-* tokens)
+                'primary' => [
+                    50 => '238, 243, 255', 100 => '219, 228, 255', 200 => '184, 201, 255', 300 => '143, 171, 245', 400 => '96, 134, 230',
+                    500 => '53, 95, 207', 600 => '22, 59, 156', 700 => '16, 47, 128', 800 => '12, 36, 98', 900 => '8, 26, 72', 950 => '4, 20, 51',
+                ],
                 'info' => Color::Blue,
                 'warning' => Color::Amber,
             ])
@@ -56,6 +64,8 @@ class AdminPanelProvider extends PanelProvider
                 NavigationGroup::make('Advanced')->collapsed(),
             ])
             ->renderHook(PanelsRenderHook::AUTH_LOGIN_FORM_AFTER, fn () => view('filament.back-to-site'))
+            // Responsive polish and school styling; a plain stylesheet in /public so no Filament theme build is needed.
+            ->renderHook(PanelsRenderHook::HEAD_END, fn () => view('filament.theme-link'))
             ->navigationItems([
                 NavigationItem::make('Manage results')
                     ->url(fn () => route('staff.results'))

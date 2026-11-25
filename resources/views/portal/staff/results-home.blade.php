@@ -48,17 +48,17 @@
                 <p class="empty-state">No published report is being withheld right now.</p>
             @else
                 <p class="muted" style="font-size:.85rem;margin:0 0 .6rem">Their results, grades and positions are calculated as normal. Only the student and parent are blocked from viewing them until the fees are cleared; staff can still open and print them.</p>
-                <div style="overflow-x:auto">
-                    <table style="width:100%;border-collapse:collapse;font-size:.9rem">
-                        <thead><tr style="text-align:left;border-bottom:1px solid #ddd"><th style="padding:.4rem">Student</th><th style="padding:.4rem">Class</th><th style="padding:.4rem">Unpaid items</th><th style="padding:.4rem">Amount due</th><th style="padding:.4rem"></th></tr></thead>
+                <div class="table-wrap">
+                    <table class="table table--stack">
+                        <thead><tr><th>Student</th><th>Class</th><th>Unpaid items</th><th>Amount due</th><th></th></tr></thead>
                         <tbody>
                         @foreach($withheld as $row)
-                            <tr style="border-bottom:1px solid #eee">
-                                <td style="padding:.4rem"><strong>{{ strtoupper($row['student']->last_name) }}</strong>, {{ $row['student']->first_name }}<div class="muted" style="font-size:.75rem">{{ $row['student']->student_number }}</div></td>
-                                <td style="padding:.4rem">{{ $row['student']->schoolClass?->name }}@if($row['student']->arm) &middot; {{ $row['student']->arm->name }}@endif</td>
-                                <td style="padding:.4rem">{{ $row['items'] }}</td>
-                                <td style="padding:.4rem">{{ $row['currency'] }} {{ number_format((float) $row['amount'], 2) }}</td>
-                                <td style="padding:.4rem"><a class="chip-link" href="{{ route('reports.show', ['student' => $row['student']->id, 'term' => $term->id]) }}">View report</a></td>
+                            <tr>
+                                <td><strong>{{ strtoupper($row['student']->last_name) }}</strong>, {{ $row['student']->first_name }}<div class="muted" style="font-size:.75rem">{{ $row['student']->student_number }}</div></td>
+                                <td>{{ $row['student']->schoolClass?->name }}@if($row['student']->arm) &middot; {{ $row['student']->arm->name }}@endif</td>
+                                <td>{{ $row['items'] }}</td>
+                                <td>{{ $row['currency'] }} {{ number_format((float) $row['amount'], 2) }}</td>
+                                <td class="actions" data-label=""><a class="chip-link" href="{{ route('reports.show', ['student' => $row['student']->id, 'term' => $term->id]) }}">View report</a></td>
                             </tr>
                         @endforeach
                         </tbody>

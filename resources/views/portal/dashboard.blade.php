@@ -1,20 +1,16 @@
 @extends('site.layout')
 @section('title', 'Portal Dashboard | '.$settings->short_name)
 @section('content')
-<section class="portal-head">
-    <div class="site-container portal-head__inner">
-        <div>
-            <h1>Welcome, {{ $user->name }}</h1>
-            <p>{{ ['student' => 'Student portal', 'parent' => 'Parent portal', 'teacher' => 'Staff portal', 'admin' => 'Administration', 'account' => 'School portal'][$kind] ?? 'School portal' }} &middot; Account: {{ ucfirst($kind) }}</p>
-        </div>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-            <a class="btn btn--ghost-light" href="{{ route('portal.search') }}">Search portal</a>
-            @if($kind === 'admin' && ($user->can('manage website content') || $user->can('manage results') || $user->can('manage payments') || $user->can('manage students')))<a class="btn btn--ghost-light" href="{{ url('/admin') }}">Admin console</a>@endif
-            @if($kind !== 'student')<a class="btn btn--ghost-light" href="{{ route('account.password') }}">Change password</a>@endif
-            <form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="btn btn--ghost-light">Sign out</button></form>
-        </div>
-    </div>
-</section>
+@php
+    $kindLabel = ['student' => 'Student portal', 'parent' => 'Parent portal', 'teacher' => 'Staff portal', 'admin' => 'Administration', 'account' => 'School portal'][$kind] ?? 'School portal';
+    $canAdminConsole = $user->can('manage website content') || $user->can('manage results') || $user->can('manage payments') || $user->can('manage students');
+@endphp
+@include('portal._topbar', [
+    'title' => 'Welcome, '.$user->name,
+    'subtitle' => $kindLabel.' · Account: '.ucfirst($kind),
+    'showAdmin' => $kind === 'admin' && $canAdminConsole,
+    'showPassword' => $kind !== 'student',
+])
 @if(session('success'))<div class="site-container" style="margin-top:1rem"><div role="status" class="alert alert--ok">{{ session('success') }}</div></div>@endif
 <section class="portal-body"><div class="site-container">
 @if($kind === 'student')
@@ -73,21 +69,26 @@
         </div>
     </div>
 @else
+    @if($user->can('publish results'))
     <div class="kpis">
-        @if($user->can('publish results'))<div class="kpi"><span>Results awaiting publication</span><strong>{{ $pendingTotal }}</strong></div>@endif
+        <div class="kpi"><span class="kpi__icon kpi__icon--gold"><x-site-icon name="clock" /></span><div class="kpi__text"><span>Results awaiting publication</span><strong>{{ $pendingTotal }}</strong></div></div>
     </div>
-    <div class="panel" style="margin-top:1.2rem">
-        <div class="panel__head"><h2>Administration</h2></div>
+    @endif
+    <div class="panel" style="margin-top:1.1rem">
+        <div class="panel__head"><h2>Quick actions</h2></div>
         <div class="panel__body">
             <p class="muted" style="margin-top:0">Tools shown here depend on the permissions granted to your account.</p>
-            <div style="display:flex;flex-wrap:wrap;gap:.7rem">
-                @if($user->can('manage website content') || $user->can('manage results') || $user->can('manage payments') || $user->can('manage students'))<a class="btn btn--maroon" href="{{ url('/admin') }}">Open admin console</a>@endif
-                @if($user->can('manage results') || $user->can('enter assigned results'))<a class="btn btn--navy" href="{{ route('staff.results') }}">Manage results</a><a class="btn btn--outline" href="{{ route('staff.results.archive') }}">Reports archive</a>@endif
+            <div class="action-grid">
+                @if($canAdminConsole)<a class="action-tile" href="{{ url('/admin') }}"><span class="kpi__icon"><x-site-icon name="layers" /></span><span>Admin console<small>Students, staff, fees, website</small></span></a>@endif
+                @if($user->can('manage results') || $user->can('enter assigned results'))
+                    <a class="action-tile" href="{{ route('staff.results') }}"><span class="kpi__icon kpi__icon--green"><x-site-icon name="clipboard" /></span><span>Manage results<small>Enter scores, print reports</small></span></a>
+                    <a class="action-tile" href="{{ route('staff.results.archive') }}"><span class="kpi__icon kpi__icon--gold"><x-site-icon name="folder" /></span><span>Reports archive<small>Find any student's report</small></span></a>
+                @endif
             </div>
         </div>
     </div>
     @if($activity->isNotEmpty())
-    <div class="panel"><div class="panel__head"><h2>Recent activity</h2></div><div class="panel__body"><ul style="margin:0;padding:0;list-style:none">@foreach($activity as $event)<li style="padding:.45rem 0;border-bottom:1px solid var(--line);font-size:.9rem"><strong>{{ $event->event }}</strong> &middot; {{ $event->created_at?->format('M j, Y H:i') }}</li>@endforeach</ul></div></div>
+    <div class="panel"><div class="panel__head"><h2>Recent activity</h2></div><div class="panel__body"><ul class="activity">@foreach($activity as $event)<li><strong>{{ $event->event }}</strong><time datetime="{{ $event->created_at?->toIso8601String() }}">{{ $event->created_at?->format('M j, Y H:i') }}</time></li>@endforeach</ul></div></div>
     @endif
 
 @endif
@@ -95,7 +96,10 @@
 @if(in_array($kind, ['student', 'parent'], true))
     @include('portal._fees')
 @elseif($kind === 'admin' && $user->can('manage payments') && $payments->isNotEmpty())
-    <section class="mt-10"><h2 class="font-display text-2xl font-semibold text-[var(--brand-800)]">Recent payment transactions</h2><div class="mt-4 overflow-x-auto rounded-lg border border-[var(--border)]"><table class="w-full min-w-[700px] text-left text-sm"><thead class="bg-[var(--surface-alt)]"><tr><th class="p-3">Student</th><th class="p-3">Amount</th><th class="p-3">Method</th><th class="p-3">Status</th><th class="p-3">Receipt</th></tr></thead><tbody>@foreach($payments as $payment)<tr class="border-t border-[var(--border)]"><td class="p-3">{{ $payment->student?->fullName() }}</td><td class="p-3">{{ $payment->currency }} {{ number_format((float)$payment->amount,2) }}</td><td class="p-3">{{ ucfirst($payment->gateway) }}</td><td class="p-3">{{ ucfirst($payment->status) }}</td><td class="p-3">{{ $payment->receipt?->receipt_number ?? '—' }}</td></tr>@endforeach</tbody></table></div></section>
+    <div class="panel" style="margin-top:1.1rem">
+        <div class="panel__head"><h2>Recent payment transactions</h2></div>
+        <div class="table-wrap"><table class="table table--stack"><thead><tr><th>Student</th><th>Amount</th><th>Method</th><th>Status</th><th>Receipt</th></tr></thead><tbody>@foreach($payments as $payment)<tr><td>{{ $payment->student?->fullName() }}</td><td>{{ $payment->currency }} {{ number_format((float)$payment->amount,2) }}</td><td>{{ ucfirst($payment->gateway) }}</td><td><span class="pill {{ $payment->status === 'successful' ? 'pill--ok' : ($payment->status === 'pending' ? 'pill--warn' : 'pill--bad') }}">{{ ucfirst($payment->status) }}</span></td><td>{{ $payment->receipt?->receipt_number ?? '—' }}</td></tr>@endforeach</tbody></table></div>
+    </div>
 @endif
 </div></section>
 @endsection

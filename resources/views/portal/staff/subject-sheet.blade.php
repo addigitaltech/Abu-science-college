@@ -15,7 +15,7 @@
         <div class="panel">
             <div class="panel__head"><h2>Class score sheet</h2><span class="muted" style="font-size:.85rem">Maximum marks: @foreach(['ca1' => 'CA 1', 'ca2' => 'CA 2', 'ca3' => 'CA 3', 'exam' => 'Exam'] as $key => $label)@if($maxima[$key] > 0){{ $label }} {{ $maxima[$key] }}@if(! $loop->last) &middot; @endif @endif @endforeach</span></div>
             <div class="table-wrap">
-                <table class="table">
+                <table class="table table--stack">
                     <thead><tr><th>#</th><th>Student</th><th>Offered</th>@foreach(['ca1' => 'CA 1', 'ca2' => 'CA 2', 'ca3' => 'CA 3', 'exam' => 'Exam'] as $key => $label)@if($maxima[$key] > 0)<th class="num">{{ $label }}<br><span style="font-weight:500">/{{ $maxima[$key] }}</span></th>@endif @endforeach<th class="num">Total</th><th class="num">Grade</th><th>Status</th></tr></thead>
                     <tbody>
                     @forelse($students as $student)

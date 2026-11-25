@@ -19,7 +19,7 @@
     </div>
     <div class="panel">
         <div class="table-wrap">
-            <table class="table">
+            <table class="table table--stack">
                 <thead><tr><th>Student</th><th>Class</th><th>Reports</th></tr></thead>
                 <tbody>
                 @forelse($students as $student)

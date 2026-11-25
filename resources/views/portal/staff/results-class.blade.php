@@ -17,7 +17,7 @@
             </form>
         </div>
         <div class="table-wrap">
-            <table class="table">
+            <table class="table table--stack">
                 <thead><tr><th>Full name</th><th>Student ID</th><th>Gender</th><th>Date of birth</th><th class="num">Age</th><th>Result status</th><th></th></tr></thead>
                 <tbody>
                 @forelse($students as $student)
@@ -37,7 +37,7 @@
                             @if($pending > 0)<span class="pill pill--warn">{{ $pending }} pending</span>@endif
                             @if($published + $pending === 0)<span class="pill">No scores yet</span>@endif
                         </td>
-                        <td class="actions">
+                        <td class="actions" data-label="">
                             <a class="link-action link-action--green" href="{{ route('staff.results.student', ['student' => $student->id, 'term' => $term->id]) }}">Enter result</a>
                             @if($isAdmin)<a class="link-action link-action--blue" href="{{ route('reports.show', ['student' => $student->id, 'term' => $term->id]) }}" target="_blank" rel="noopener">Print result</a>@endif
                         </td>

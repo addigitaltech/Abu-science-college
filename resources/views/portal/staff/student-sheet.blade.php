@@ -29,7 +29,7 @@
         <div class="panel" style="margin-top:1.2rem">
             <div class="panel__head"><h2>Subjects and scores</h2><span class="muted" style="font-size:.85rem">Untick a subject the student does not offer</span></div>
             <div class="table-wrap">
-                <table class="table">
+                <table class="table table--stack">
                     <thead><tr><th>Offered</th><th>Subject</th><th class="num">CA 1</th><th class="num">CA 2</th><th class="num">CA 3</th><th class="num">Exam</th><th class="num">Total</th><th class="num">Grade</th><th>Status</th></tr></thead>
                     <tbody>
                     @forelse($rows as $row)

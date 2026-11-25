@@ -38,3 +38,11 @@ Copy every file into the project root (same paths), commit, push to `main`. No f
 
 ## Tests added
 `tests/Feature/StaffResultsTest.php`, `StudentCsvImporterTest.php`; `ExampleTest.php` updated for the new home page text.
+
+---
+# UI/UX upgrade (design system, responsive portals, admin polish)
+- `resources/css/ui.css` (new, loaded via app.js): accessible gold text colour, 16px inputs, consistent buttons/forms/alerts/pills, phone card layout for tables (`.table--stack`), portal shell, sign-in screens, confirm dialog.
+- `resources/js/ui.js` (new, CSP-safe): styled confirm dialog (keeps `data-confirm`), loading buttons, table labels, show/hide password, dismissible alerts, account menu.
+- Portal: shared `portal/_topbar`, new dashboard quick actions/KPIs, tables converted (staff results, archive, score sheets, fees, payments). Broadsheet Print button fixed (inline onclick was blocked by CSP).
+- Auth: `x-auth-card` component used by all sign-in, reset and change-password pages.
+- Admin (Filament): navy palette, collapsible sidebar, `public/css/abu-admin.css`, new widgets (results chart, students per class, needs-attention, recent activity).

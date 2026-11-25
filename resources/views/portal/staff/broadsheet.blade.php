@@ -32,7 +32,7 @@
     @if($ready)
         <div class="panel"><div class="panel__head" style="display:flex;justify-content:space-between;gap:1rem;align-items:center;flex-wrap:wrap">
             <div><h2>{{ $class->name }}@if($armId) · {{ $class->arms->firstWhere('id', $armId)?->name }}@else · All arms @endif</h2><p class="muted" style="margin:.25rem 0 0">{{ $term->session?->name }} · {{ $term->name }} @if($subjects->isNotEmpty()) · {{ $subjects->count() }} subject(s)@endif</p></div>
-            <div class="no-print" style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn--navy" onclick="window.print()">Print</button><a class="btn btn--green" href="{{ request()->fullUrlWithQuery(['download' => 'pdf']) }}">Download PDF</a></div>
+            <div class="no-print" style="display:flex;gap:.5rem;flex-wrap:wrap"><button type="button" class="btn btn--navy" data-print>Print</button><a class="btn btn--green" href="{{ request()->fullUrlWithQuery(['download' => 'pdf']) }}">Download PDF</a></div>
         </div><div class="panel__body">
             <p class="muted" style="font-size:.8rem;margin:0 0 .5rem">Scroll inside the table to view all subjects and students. Student names and column headings stay visible while you move across the results.</p>
             @include('portal.staff._broadsheet-table')

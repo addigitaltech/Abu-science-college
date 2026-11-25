@@ -1,16 +1,5 @@
-<section class="portal-head">
-    <div class="site-container portal-head__inner">
-        <div>
-            <h1>{{ $title }}</h1>
-            @if(!empty($subtitle))<p>{{ $subtitle }}</p>@endif
-        </div>
-        <div style="display:flex;gap:.6rem;flex-wrap:wrap">
-            <a class="btn btn--ghost-light" href="{{ route('portal.search') }}">Search portal</a>
-            @if(auth()->user()->can('manage students') || auth()->user()->can('manage results') || auth()->user()->can('manage website content'))<a class="btn btn--ghost-light" href="{{ url('/admin') }}">Admin console</a>@endif
-            <form method="post" action="{{ route('logout') }}">@csrf<button type="submit" class="btn btn--ghost-light">Sign out</button></form>
-        </div>
-    </div>
-</section>
+@php($canSeeAdmin = auth()->user()->can('manage students') || auth()->user()->can('manage results') || auth()->user()->can('manage website content'))
+@include('portal._topbar', ['title' => $title, 'subtitle' => $subtitle ?? null, 'showAdmin' => $canSeeAdmin, 'showPassword' => false])
 <nav class="portal-nav" aria-label="Staff portal">
     <div class="site-container">
         <ul>

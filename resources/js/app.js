@@ -1,7 +1,11 @@
 import './bootstrap';
 import { initSite } from './site';
+import { initUi } from './ui';
+import '../css/ui.css';
 
+// Fallback only: browsers with <dialog> support get the styled confirm dialog from ui.js
 document.addEventListener('submit', (event) => {
+    if (typeof HTMLDialogElement === 'function') return;
     const form = event.target;
     const message = form instanceof HTMLFormElement ? form.dataset.confirm : null;
     if (message && !window.confirm(message)) event.preventDefault();
@@ -150,9 +154,10 @@ function initRealtimeSubmitSearch() {
 }
 
 if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', () => { initSite(); initHeaderSearch(); initLiveSearch(); initRealtimeSubmitSearch(); });
+    document.addEventListener('DOMContentLoaded', () => { initSite(); initUi(); initHeaderSearch(); initLiveSearch(); initRealtimeSubmitSearch(); });
 } else {
     initSite();
+    initUi();
     initHeaderSearch();
     initLiveSearch();
     initRealtimeSubmitSearch();
