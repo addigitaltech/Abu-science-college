@@ -20,6 +20,11 @@ class Arm extends Model
 
     public function subjects()
     {
-        return $this->hasMany(Subject::class);
+        return $this->belongsToMany(Subject::class, 'subject_class_assignments', 'arm_id', 'subject_id')->withPivot('school_class_id')->withTimestamps();
+    }
+
+    public function subjectAssignments()
+    {
+        return $this->hasMany(SubjectClassAssignment::class);
     }
 }

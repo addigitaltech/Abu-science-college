@@ -115,8 +115,7 @@ final class ResultSheetService
     {
         return Subject::query()
             ->where('status', 'active')
-            ->where(fn ($query) => $query->whereNull('school_class_id')->orWhere('school_class_id', $student->school_class_id))
-            ->where(fn ($query) => $query->whereNull('arm_id')->when($student->arm_id, fn ($q) => $q->orWhere('arm_id', $student->arm_id)))
+            ->applicableTo($student->school_class_id ? (int) $student->school_class_id : null, $student->arm_id ? (int) $student->arm_id : null)
             ->orderBy('name')
             ->get();
     }

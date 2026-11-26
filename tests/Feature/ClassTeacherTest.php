@@ -39,6 +39,7 @@ class ClassTeacherTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
         $this->withoutVite();
         $this->seed();
 

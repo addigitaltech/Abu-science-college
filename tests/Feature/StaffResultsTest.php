@@ -13,7 +13,7 @@ use App\Models\Subject;
 use App\Models\Teacher;
 use App\Models\TeacherAssignment;
 use App\Models\User;
-use App\Filament\Resources\SubjectResource;
+use App\Filament\Resources\SubjectResource\Pages\CreateSubject;
 use App\Filament\Resources\SubjectResource\Pages\EditSubject;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -38,6 +38,7 @@ class StaffResultsTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        $this->withoutMiddleware(\Illuminate\Foundation\Http\Middleware\ValidateCsrfToken::class);
         $this->withoutVite();
         $this->seed();
 
@@ -64,10 +65,11 @@ class StaffResultsTest extends TestCase
     #[Test]
     public function a_teacher_can_save_scores_for_an_assigned_class_and_subject(): void
     {
-        $this->actingAs($this->teacher)->post(route('staff.results.subject.save', $this->assignment), [
+        $response = $this->actingAs($this->teacher)->post(route('staff.results.subject.save', $this->assignment), [
             'term_id' => $this->term->id,
             'rows' => [$this->student->id => ['offered' => '1', 'ca1' => '30', 'exam' => '50']],
-        ])->assertRedirect();
+        ]);
+        $response->assertRedirect()->assertSessionHasNoErrors();
 
         $result = Result::query()->where('student_id', $this->student->id)->where('subject_id', $this->maths->id)->firstOrFail();
         $this->assertSame('pending', $result->status);
@@ -75,7 +77,7 @@ class StaffResultsTest extends TestCase
     }
 
     #[Test]
-    public function a_subject_can_be_created_for_multiple_classes_without_server_errors(): void
+    public function one_subject_record_can_be_assigned_to_multiple_classes_and_reused(): void
     {
         $created = Subject::createForClasses([
             'code' => 'BIO',
@@ -83,9 +85,11 @@ class StaffResultsTest extends TestCase
             'status' => 'active',
         ], [$this->class->id, $this->otherClass->id]);
 
-        $this->assertCount(2, $created);
-        $this->assertSame(['BIO-JSS1', 'BIO-JSS2'], $created->pluck('code')->all());
-        $this->assertEqualsCanonicalizing([$this->class->id, $this->otherClass->id], $created->pluck('school_class_id')->all());
+        $this->assertCount(1, $created);
+        $subject = $created->first();
+        $this->assertNull($subject->school_class_id);
+        $this->assertSame('BIO', $subject->code);
+        $this->assertEqualsCanonicalizing([$this->class->id, $this->otherClass->id], $subject->classes()->pluck('school_classes.id')->all());
 
         $retry = Subject::createForClasses([
             'code' => 'BIO',
@@ -93,82 +97,79 @@ class StaffResultsTest extends TestCase
             'status' => 'active',
         ], [$this->class->id, $this->otherClass->id]);
 
-        $this->assertCount(0, $retry);
-        $this->assertSame(2, Subject::query()->where('name', 'Biology')->count());
+        $this->assertCount(1, $retry);
+        $this->assertSame($subject->id, $retry->first()->id);
+        $this->assertSame(1, Subject::query()->where('name', 'Biology')->count());
     }
 
     #[Test]
-    public function a_subject_edit_page_lists_its_classes_and_can_remove_one_assignment(): void
+    public function the_subject_create_form_creates_one_subject_for_all_selected_classes(): void
     {
-        $subjects = Subject::createForClasses([
-            'code' => 'CHEM',
-            'name' => 'Chemistry',
-            'status' => 'active',
-        ], [$this->class->id, $this->otherClass->id]);
         $admin = User::factory()->create();
         $admin->assignRole('Super Admin');
 
         Livewire::actingAs($admin)
-            ->test(EditSubject::class, ['record' => $subjects->first()->id])
-            ->assertSee('Currently added classes')
-            ->assertSee('JSS1')
-            ->assertSee('JSS2')
-            ->callAction('removeClassAssignment', ['class_id' => $this->otherClass->id]);
+            ->test(CreateSubject::class)
+            ->set('data.code', 'BIO')
+            ->set('data.name', 'Biology')
+            ->set('data.arm_id', null)
+            ->set('data.status', 'active')
+            ->set('data.class_ids', [$this->class->id, $this->otherClass->id])
+            ->call('create')
+            ->assertHasNoFormErrors();
 
-        $this->assertDatabaseHas('subjects', ['id' => $subjects->first()->id, 'school_class_id' => $this->class->id]);
-        $this->assertDatabaseMissing('subjects', ['id' => $subjects->last()->id]);
+        $subject = Subject::query()->where('name', 'Biology')->firstOrFail();
+        $this->assertSame(1, Subject::query()->where('name', 'Biology')->count());
+        $this->assertEqualsCanonicalizing(
+            [$this->class->id, $this->otherClass->id],
+            $subject->classes()->pluck('school_classes.id')->all(),
+        );
+    }
+
+    #[Test]
+    public function editing_a_subject_updates_its_class_relationships_without_creating_a_copy(): void
+    {
+        $subject = Subject::createForClasses([
+            'code' => 'CHEM',
+            'name' => 'Chemistry',
+            'status' => 'active',
+        ], [$this->class->id])->first();
+        $admin = User::factory()->create();
+        $admin->assignRole('Super Admin');
+
+        Livewire::actingAs($admin)
+            ->test(EditSubject::class, ['record' => $subject->id])
+            ->fillForm([
+                'code' => 'CHEM',
+                'name' => 'Chemistry',
+                'class_ids' => [$this->otherClass->id],
+                'arm_id' => null,
+                'status' => 'active',
+            ])
+            ->set('data.class_ids', [$this->otherClass->id])
+            ->call('save')
+            ->assertHasNoFormErrors();
+
+        $this->assertDatabaseHas('subject_class_assignments', ['subject_id' => $subject->id, 'school_class_id' => $this->otherClass->id, 'arm_id' => null]);
+        $this->assertDatabaseMissing('subject_class_assignments', ['subject_id' => $subject->id, 'school_class_id' => $this->class->id]);
         $this->assertSame(1, Subject::query()->where('name', 'Chemistry')->count());
     }
 
     #[Test]
-    public function removing_the_class_open_in_edit_redirects_to_a_remaining_assignment(): void
+    public function an_optional_arm_is_validated_against_the_assigned_class(): void
     {
-        $subjects = Subject::createForClasses([
-            'code' => 'PHYS',
-            'name' => 'Physics',
-            'status' => 'active',
-        ], [$this->class->id, $this->otherClass->id]);
-        $admin = User::factory()->create();
-        $admin->assignRole('Super Admin');
-
-        Livewire::actingAs($admin)
-            ->test(EditSubject::class, ['record' => $subjects->first()->id])
-            ->callAction('removeClassAssignment', ['class_id' => $this->class->id])
-            ->assertRedirect(SubjectResource::getUrl('edit', ['record' => $subjects->last()]));
-
-        $this->assertDatabaseMissing('subjects', ['id' => $subjects->first()->id]);
-        $this->assertDatabaseHas('subjects', ['id' => $subjects->last()->id, 'school_class_id' => $this->otherClass->id]);
-    }
-
-    #[Test]
-    public function removing_a_class_with_teacher_history_keeps_the_record_and_deactivates_it(): void
-    {
-        $subjects = Subject::createForClasses([
+        $arm = Arm::query()->create(['name' => 'Blue']);
+        $this->class->arms()->attach($arm->id);
+        $subject = Subject::createForClasses([
             'code' => 'BIO',
             'name' => 'Biology',
             'status' => 'active',
-        ], [$this->class->id, $this->otherClass->id]);
-        $assignmentToRemove = $subjects->last();
-        $teacherId = Teacher::query()->where('user_id', $this->teacher->id)->value('id');
-        TeacherAssignment::query()->create([
-            'teacher_id' => $teacherId,
-            'school_class_id' => $this->otherClass->id,
-            'arm_id' => null,
-            'subject_id' => $assignmentToRemove->id,
-        ]);
-        $admin = User::factory()->create();
-        $admin->assignRole('Super Admin');
+            'arm_id' => $arm->id,
+        ], [$this->class->id])->first();
 
-        Livewire::actingAs($admin)
-            ->test(EditSubject::class, ['record' => $subjects->first()->id])
-            ->callAction('removeClassAssignment', ['class_id' => $this->otherClass->id]);
-
-        $this->assertDatabaseHas('subjects', [
-            'id' => $assignmentToRemove->id,
-            'school_class_id' => $this->otherClass->id,
-            'status' => 'inactive',
-        ]);
-        $this->assertDatabaseHas('teacher_assignments', ['subject_id' => $assignmentToRemove->id]);
+        $this->assertTrue($subject->appliesToClass($this->class->id, $arm->id));
+        $this->assertFalse($subject->appliesToClass($this->class->id, null));
+        $this->assertFalse($subject->appliesToClass($this->otherClass->id, $arm->id));
     }
 
     #[Test]

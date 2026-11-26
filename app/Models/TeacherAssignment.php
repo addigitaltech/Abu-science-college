@@ -20,11 +20,8 @@ class TeacherAssignment extends Model
             if ($assignment->arm_id && ! SchoolClass::query()->whereKey($assignment->school_class_id)->whereHas('arms', fn ($query) => $query->whereKey($assignment->arm_id))->exists()) {
                 throw ValidationException::withMessages(['arm_id' => 'The selected arm is not part of this class.']);
             }
-            if ($subject->school_class_id && (int) $subject->school_class_id !== (int) $assignment->school_class_id) {
-                throw ValidationException::withMessages(['subject_id' => 'The selected subject does not belong to this class.']);
-            }
-            if ($subject->arm_id && (int) $subject->arm_id !== (int) $assignment->arm_id) {
-                throw ValidationException::withMessages(['subject_id' => 'The selected subject is scoped to a different class arm.']);
+            if (! $subject->appliesToClass((int) $assignment->school_class_id, $assignment->arm_id ? (int) $assignment->arm_id : null)) {
+                throw ValidationException::withMessages(['subject_id' => 'The selected subject is not assigned to this class and arm.']);
             }
         });
     }

@@ -170,8 +170,7 @@ class StaffResultsController extends Controller
 
             $subjectIds = Subject::query()
                 ->where('status', 'active')
-                ->where(fn ($query) => $query->whereNull('school_class_id')->orWhere('school_class_id', $class->id))
-                ->when($armId, fn ($query) => $query->where(fn ($armQuery) => $armQuery->whereNull('arm_id')->orWhere('arm_id', $armId)))
+                ->applicableTo((int) $class->id, $armId ? (int) $armId : null)
                 ->pluck('id')
                 ->merge($results->pluck('subject_id'))
                 ->unique()->values();
